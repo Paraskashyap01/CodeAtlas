@@ -1,0 +1,200 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* === Base Styles === */
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    margin: 0;
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: linear-gradient(135deg, #0f1117 0%, #1a1f28 100%);
+    color: #e4e4e7;
+    letter-spacing: 0.3px;
+  }
+
+  /* Refined input styles */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  textarea,
+  select {
+    @apply transition-all duration-200;
+  }
+
+  input[type="text"]:focus,
+  input[type="email"]:focus,
+  input[type="password"]:focus,
+  input[type="number"]:focus,
+  textarea:focus,
+  select:focus {
+    @apply ring-2 ring-blue-400/30;
+  }
+
+  /* Smooth scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #18181b;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #52525b;
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #71717a;
+  }
+}
+
+@layer components {
+  /* Button base */
+  .btn-primary {
+    @apply px-4 py-2.5 font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md active:scale-95;
+  }
+
+  .btn-secondary {
+    @apply px-4 py-2.5 font-medium rounded-lg border transition-all duration-200 active:scale-95;
+  }
+
+  /* Card styles */
+  .card {
+    @apply rounded-xl border bg-gradient-to-br backdrop-blur-sm transition-all duration-200;
+  }
+
+  .card-hover {
+    @apply hover:shadow-lg hover:border-opacity-100 cursor-pointer;
+  }
+
+  /* Stat card */
+  .stat-card {
+    @apply card border-zinc-800/50 bg-gradient-to-br from-zinc-900/60 to-zinc-800/40;
+  }
+
+  /* Panel */
+  .panel {
+    @apply card border-zinc-800/50 bg-gradient-to-br from-zinc-900/50 to-zinc-800/30 p-6;
+  }
+
+  /* Badge */
+  .badge {
+    @apply inline-flex items-center rounded-full px-3 py-1 text-xs font-medium;
+  }
+
+  .badge-primary {
+    @apply badge bg-blue-500/20 text-blue-200;
+  }
+
+  .badge-success {
+    @apply badge bg-emerald-500/20 text-emerald-200;
+  }
+
+  .badge-warning {
+    @apply badge bg-amber-500/20 text-amber-200;
+  }
+
+  .badge-danger {
+    @apply badge bg-rose-500/20 text-rose-200;
+  }
+
+  /* Section title */
+  .section-title {
+    @apply text-xl font-semibold tracking-tight text-zinc-50;
+  }
+
+  .section-subtitle {
+    @apply text-sm text-zinc-400;
+  }
+}
+
+/* === Component-specific Styles === */
+
+/* Heatmap styling */
+.react-calendar-heatmap text {
+  fill: #a1a1aa;
+  font-size: 10px;
+}
+
+.react-calendar-heatmap .color-empty {
+  fill: #27272a;
+}
+
+.react-calendar-heatmap .color-scale-1 {
+  fill: #164e63;
+}
+
+.react-calendar-heatmap .color-scale-2 {
+  fill: #0e7490;
+}
+
+.react-calendar-heatmap .color-scale-3 {
+  fill: #06b6d4;
+}
+
+.react-calendar-heatmap .color-scale-4 {
+  fill: #34d399;
+}
+
+/* Chart tooltip styling */
+.recharts-tooltip-wrapper {
+  outline: none !important;
+}
+
+.recharts-default-tooltip {
+  background: rgba(24, 24, 27, 0.95) !important;
+  border: 1px solid #3f3f46 !important;
+  border-radius: 8px !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3) !important;
+  padding: 12px !important;
+}
+
+.recharts-tooltip-label {
+  color: #e4e4e7 !important;
+  font-weight: 500;
+}
+
+.recharts-tooltip-item {
+  color: #a1a1aa !important;
+}
+
+/* Animations */
+@keyframes slide-down {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-down {
+  animation: slide-down 0.3s ease-out;
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.3s ease-out;
+}
