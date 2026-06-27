@@ -27,7 +27,12 @@ export const getLCStats = async (req, res) => {
     res.json({ stats: cache.stats, handle: cache.handle, fetchedAt: cache.fetchedAt });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'Unable to fetch LeetCode stats', error: error.message });
+    res.status(200).json({
+      stats: null,
+      handle: user?.lcHandle || null,
+      fetchedAt: null,
+      error: error.message || 'Unable to fetch LeetCode stats',
+    });
   }
 };
 

@@ -10,15 +10,18 @@ import notesRoutes from './routes/notes.js';
 import goalsRoutes from './routes/goals.js';
 import recommendationsRoutes from './routes/recommendations.js';
 import profileRoutes from './routes/profile.js';
+import friendsRoutes from './routes/friends.js';
 import { startReminderJob } from './services/reminderService.js';
+import { apiLimiter } from './middleware/rateLimiter.js';
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+const allowedOrigin = process.env.ALLOWED_ORIGIN;
 app.use(cors({
-  origin: process.env.ALLOWED_ORIGIN || '*',
+  origin: allowedOrigin ? allowedOrigin.split(',').map((value) => value.trim()) : true,
   credentials: true,
 }));
 app.use(express.json());
@@ -28,12 +31,15 @@ startReminderJob();
 
 app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
+app.use(['/api/cf', '/api/lc'], apiLimiter);
 app.use('/api/cf', cfRoutes);
 app.use('/api/lc', lcRoutes);
 app.use('/api/notes', notesRoutes);
 app.use('/api/goals', goalsRoutes);
 app.use('/api/recommendations', recommendationsRoutes);
 app.use('/api/profile', profileRoutes);
+app.use('/api/friends', friendsRoutes);
+app.use(['/api/cf', '/api/lc'], apiLimiter);
 
 app.get('/api/ping', (req, res) => {
   res.json({ message: 'CP Growth Tracker API is alive' });

@@ -15,6 +15,11 @@ const dayKeyFromSeconds = (seconds) => {
   return new Date(seconds * 1000).toISOString().slice(0, 10);
 };
 
+const weakTopicMinAttempts = () => {
+  const configured = Number(process.env.WEAK_TOPIC_MIN_ATTEMPTS || process.env.WEAK_TOPIC_THRESHOLD || 5);
+  return Number.isFinite(configured) && configured > 0 ? configured : 5;
+};
+
 export const buildCFDerivedStats = (submissions = []) => {
   const solvedProblems = new Set();
   const attemptedByTag = new Map();
@@ -73,7 +78,7 @@ export const buildCFDerivedStats = (submissions = []) => {
     .sort((a, b) => b.attempts - a.attempts || a.tag.localeCompare(b.tag));
 
   const weakTopics = topicStats
-    .filter((topic) => topic.attempts >= 3)
+    .filter((topic) => topic.attempts >= weakTopicMinAttempts())
     .sort((a, b) => a.accuracy - b.accuracy || b.attempts - a.attempts)
     .slice(0, 5);
 

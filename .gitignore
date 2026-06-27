@@ -6,6 +6,9 @@ server/node_modules/
 # Environment files
 .env
 .env.*
+!.env.example
+!client/.env.example
+!server/.env.example
 client/.env
 server/.env
 

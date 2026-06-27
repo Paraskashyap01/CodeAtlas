@@ -117,6 +117,9 @@ const GoalsPage = () => {
                   <span className="text-zinc-100 font-semibold">{goal.solvedCount}</span> of{' '}
                   <span className="text-zinc-100 font-semibold">{goal.targetCount}</span> problems solved
                 </p>
+                <p className="mt-2 text-xs text-zinc-500">
+                  Progress syncs from your accepted Codeforces submissions for the current week.
+                </p>
               </div>
 
               {/* Control Buttons */}

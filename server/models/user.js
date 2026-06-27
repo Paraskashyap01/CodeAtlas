@@ -22,6 +22,14 @@ const userSchema = new mongoose.Schema({
     trim: true,
     default: '',
   },
+  friends: {
+    type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+    default: [],
+  },
+  emailReminders: {
+    type: Boolean,
+    default: true,
+  },
   createdAt: {
     type: Date,
     default: Date.now,

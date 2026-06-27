@@ -24,7 +24,10 @@ export const startReminderJob = () => {
 
   cron.schedule(schedule, async () => {
     try {
-      const users = await User.find({ email: { $exists: true, $ne: '' } }).select('email cfHandle lcHandle');
+      const users = await User.find({
+        email: { $exists: true, $ne: '' },
+        emailReminders: { $ne: false },
+      }).select('email cfHandle lcHandle');
       await Promise.all(
         users.map((user) =>
           transporter.sendMail({

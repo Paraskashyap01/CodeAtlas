@@ -1,5 +1,7 @@
 import { validationResult } from 'express-validator';
 import Goal from '../models/Goal.js';
+import CachedCFData from '../models/CachedCFData.js';
+import { buildCFDerivedStats } from '../utils/cfStats.js';
 
 const getWeekStart = (date = new Date()) => {
   const d = new Date(date);
@@ -8,6 +10,29 @@ const getWeekStart = (date = new Date()) => {
   const diff = day === 0 ? -6 : 1 - day;
   d.setDate(d.getDate() + diff);
   return d;
+};
+
+const syncGoalProgress = async (userId, goal) => {
+  if (!goal) return null;
+  const cache = await CachedCFData.findOne({ userId });
+  if (!cache?.submissions?.length) return goal;
+
+  const weekStart = goal.weekStart ? new Date(goal.weekStart) : getWeekStart();
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekStart.getDate() + 7);
+
+  const acceptedThisWeek = (cache.submissions || []).filter((submission) => {
+    if (submission.verdict !== 'OK') return false;
+    const createdAt = submission.creationTimeSeconds ? new Date(submission.creationTimeSeconds * 1000) : null;
+    if (!createdAt) return false;
+    return createdAt >= weekStart && createdAt < weekEnd;
+  });
+
+  const solvedCount = new Set(acceptedThisWeek.map((submission) => `${submission.problem?.contestId ?? ''}-${submission.problem?.index ?? ''}`)).size;
+  goal.solvedCount = solvedCount;
+  goal.done = solvedCount >= goal.targetCount;
+  await goal.save();
+  return goal;
 };
 
 export const createGoal = async (req, res) => {
@@ -31,7 +56,8 @@ export const createGoal = async (req, res) => {
       runValidators: true,
     });
 
-    res.status(201).json({ goal });
+    const syncedGoal = await syncGoalProgress(req.userId, goal);
+    res.status(201).json({ goal: syncedGoal || goal });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Unable to save goal' });
@@ -42,7 +68,8 @@ export const getCurrentGoal = async (req, res) => {
   try {
     const weekStart = getWeekStart();
     const goal = await Goal.findOne({ userId: req.userId, weekStart });
-    res.json({ goal, weekStart });
+    const syncedGoal = goal ? await syncGoalProgress(req.userId, goal) : null;
+    res.json({ goal: syncedGoal || goal, weekStart });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Unable to fetch goal' });

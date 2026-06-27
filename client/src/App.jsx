@@ -6,6 +6,7 @@ import RecommendationsPage from './pages/RecommendationsPage.jsx';
 import NotesPage from './pages/NotesPage.jsx';
 import GoalsPage from './pages/GoalsPage.jsx';
 import PublicProfilePage from './pages/PublicProfilePage.jsx';
+import FriendsPage from './pages/FriendsPage.jsx';
 import { useAuth } from './context/AuthContext.jsx';
 
 const ProtectedRoute = ({ children }) => {
@@ -32,6 +33,7 @@ function App() {
       <Route path="/recommendations" element={<ProtectedRoute><RecommendationsPage /></ProtectedRoute>} />
       <Route path="/notes" element={<ProtectedRoute><NotesPage /></ProtectedRoute>} />
       <Route path="/goals" element={<ProtectedRoute><GoalsPage /></ProtectedRoute>} />
+      <Route path="/friends" element={<ProtectedRoute><FriendsPage /></ProtectedRoute>} />
       <Route path="/u/:username" element={<PublicProfilePage />} />
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
     </Routes>

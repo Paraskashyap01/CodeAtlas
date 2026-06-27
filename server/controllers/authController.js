@@ -14,20 +14,21 @@ const generateToken = (userId) => {
 export const register = async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array() });
+        return res.status(400).json({ message: errors.array().map((error) => error.msg).join(', ') });
     }
 
     const { email, password } = req.body;
+    const normalizedEmail = String(email).trim().toLowerCase();
 
     try {
-        const existing = await User.findOne({ email });
+        const existing = await User.findOne({ email: normalizedEmail });
         if (existing) {
             return res.status(400).json({ message: 'Email already registered' });
         }
 
         const passwordHash = await bcrypt.hash(password, 10);
 
-        const user = new User({ email, passwordHash });
+        const user = new User({ email: normalizedEmail, passwordHash });
         await user.save();
 
         const token = generateToken(user._id);
@@ -41,7 +42,7 @@ export const register = async (req, res) => {
 export const login = async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array() });
+        return res.status(400).json({ message: errors.array().map((error) => error.msg).join(', ') });
     }
 
     const { email, password } = req.body;

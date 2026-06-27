@@ -21,7 +21,12 @@ const LoginPage = () => {
       login(response.data);
       navigate('/dashboard');
     } catch (err) {
-      setError(err.response?.data?.message || 'Unable to login');
+      setError(
+        err.response?.data?.message ||
+          err.response?.data?.errors?.map((error) => error.msg).join(', ') ||
+          err.message ||
+          'Unable to login'
+      );
     } finally {
       setIsLoading(false);
     }

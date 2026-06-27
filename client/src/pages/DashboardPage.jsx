@@ -95,6 +95,21 @@ const DashboardPage = () => {
   const yearAgo = new Date(today);
   yearAgo.setFullYear(today.getFullYear() - 1);
 
+  const mergedCalendar = useMemo(() => {
+    const counts = new Map();
+    const addEntries = (items = []) => {
+      for (const item of items || []) {
+        if (!item?.date) continue;
+        counts.set(item.date, (counts.get(item.date) || 0) + (item.count || 1));
+      }
+    };
+
+    addEntries(cfData?.calendar);
+    addEntries(lcData?.calendar);
+
+    return [...counts.entries()].map(([date, count]) => ({ date, count })).sort((a, b) => a.date.localeCompare(b.date));
+  }, [cfData, lcData]);
+
   return (
     <AppShell title="Dashboard" subtitle="Track ratings, solved volume, topic coverage, and daily consistency from Codeforces and LeetCode.">
       <form onSubmit={handleSave} className="panel animate-fade-in-up">
@@ -199,20 +214,16 @@ const DashboardPage = () => {
           </div>
         </Panel>
       </section>
-            {/* </ResponsiveContainer>
-          </div>
-        </Panel>
-      </section> */}
 
       {/* Calendar & Weak Topics */}
       <section className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr] animate-fade-in-up" style={{ animationDelay: '0.3s' }}>
         <Panel title="📅 Submission Calendar" icon="calendar">
-          {cfData?.calendar?.length ? (
+          {mergedCalendar.length ? (
             <div className="overflow-x-auto pb-4">
               <CalendarHeatmap
                 startDate={yearAgo}
                 endDate={today}
-                values={cfData.calendar}
+                values={mergedCalendar}
                 classForValue={(value) => {
                   if (!value) return 'color-empty';
                   if (value.count >= 5) return 'color-scale-4';

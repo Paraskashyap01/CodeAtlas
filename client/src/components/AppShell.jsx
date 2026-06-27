@@ -6,6 +6,7 @@ const navItems = [
   { to: '/recommendations', label: 'Recs' },
   { to: '/notes', label: 'Notes' },
   { to: '/goals', label: 'Goals' },
+  { to: '/friends', label: 'Friends' },
 ];
 
 const AppShell = ({ title, subtitle, children }) => {
