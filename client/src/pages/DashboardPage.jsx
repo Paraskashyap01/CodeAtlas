@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import CalendarHeatmap from 'react-calendar-heatmap';
 import 'react-calendar-heatmap/dist/styles.css';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, BarChart, Bar, Tooltip, Cell } from 'recharts';
@@ -162,22 +163,26 @@ const DashboardPage = () => {
           accentColor="text-blue-900"
           colorClass="stat-card-blue"
         />
-        <StatCard
-          label="LC Easy / Med / Hard"
-          value={lcCounts ? `${lcCounts.easy}/${lcCounts.medium}/${lcCounts.hard}` : 'N/A'}
-          icon="📊"
-          gradient="from-amber-100 to-amber-50"
-          accentColor="text-amber-900"
-          colorClass="stat-card-amber"
-        />
-        <StatCard
-          label="LC Global Rank"
-          value={lcData?.stats?.ranking?.globalRanking ?? 'N/A'}
-          icon="🏆"
-          gradient="from-rose-100 to-rose-50"
-          accentColor="text-rose-900"
-          colorClass="stat-card-rose"
-        />
+        <Link to="/leetcode" className="block">
+          <StatCard
+            label="LC Easy / Med / Hard"
+            value={lcCounts ? `${lcCounts.easy}/${lcCounts.medium}/${lcCounts.hard}` : 'N/A'}
+            icon="📊"
+            gradient="from-amber-100 to-amber-50"
+            accentColor="text-amber-900"
+            colorClass="stat-card-amber"
+          />
+        </Link>
+        <Link to="/leetcode" className="block">
+          <StatCard
+            label="LC Global Rank"
+            value={lcData?.stats?.ranking?.globalRanking ?? 'N/A'}
+            icon="🏆"
+            gradient="from-rose-100 to-rose-50"
+            accentColor="text-rose-900"
+            colorClass="stat-card-rose"
+          />
+        </Link>
       </section>
 
       {/* Charts Section */}
