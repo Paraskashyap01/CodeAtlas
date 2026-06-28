@@ -126,8 +126,6 @@ const PublicProfilePage = () => {
                 </div>
               </div>
             </section>
-            {/* </section> */}
-
             {/* Chart */}
             <section className="mt-8 panel border-slate-200">
               <h2 className="section-title mb-6">📊 Difficulty Distribution</h2>
