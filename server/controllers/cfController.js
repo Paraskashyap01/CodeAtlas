@@ -2,12 +2,13 @@ import CachedCFData from '../models/CachedCFData.js';
 import User from '../models/user.js';
 import { fetchCFData, isCacheFresh } from '../services/codeforcesService.js';
 import { buildCFDerivedStats } from '../utils/cfStats.js';
+import { apiError } from '../utils/validation.js';
 
 export const getCFStats = async (req, res) => {
   try {
     const user = await User.findById(req.userId);
     if (!user || !user.cfHandle) {
-      return res.status(400).json({ message: 'Codeforces handle not set' });
+      return apiError(res, 400, 'Codeforces handle not set');
     }
 
     let cache = await CachedCFData.findOne({ userId: req.userId });
@@ -40,6 +41,7 @@ export const getCFStats = async (req, res) => {
     const derived = buildCFDerivedStats(cache.submissions);
 
     res.json({
+      success: true,
       handle: cache.handle,
       ratingHistory: cache.ratingHistory,
       submissions: cache.submissions,
@@ -48,6 +50,6 @@ export const getCFStats = async (req, res) => {
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'Unable to fetch Codeforces stats', error: error.message });
+    apiError(res, 500, 'Unable to fetch Codeforces stats');
   }
 };

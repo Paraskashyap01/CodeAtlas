@@ -1,12 +1,13 @@
 import CachedLCData from '../models/CachedLCData.js';
 import User from '../models/user.js';
 import { fetchLCData, fetchLCCalendar, isCacheFresh } from '../services/leetcodeService.js';
+import { apiError } from '../utils/validation.js';
 
 export const getLCStats = async (req, res) => {
   try {
     const user = await User.findById(req.userId);
     if (!user || !user.lcHandle) {
-      return res.status(400).json({ message: 'LeetCode handle not set' });
+      return apiError(res, 400, 'LeetCode handle not set');
     }
 
     let cache = await CachedLCData.findOne({ userId: req.userId });
@@ -40,6 +41,7 @@ export const getLCStats = async (req, res) => {
     }
 
     res.json({
+      success: true,
       stats: cache.stats,
       calendar: cache.calendar || [],
       handle: cache.handle,
@@ -47,13 +49,7 @@ export const getLCStats = async (req, res) => {
     });
   } catch (error) {
     console.error(error);
-    res.status(200).json({
-      stats: null,
-      calendar: [],
-      handle: user?.lcHandle || null,
-      fetchedAt: null,
-      error: error.message || 'Unable to fetch LeetCode stats',
-    });
+    apiError(res, 500, error.message || 'Unable to fetch LeetCode stats');
   }
 };
 

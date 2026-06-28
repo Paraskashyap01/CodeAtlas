@@ -1,7 +1,9 @@
 import { validationResult } from 'express-validator';
 import Goal from '../models/Goal.js';
 import CachedCFData from '../models/CachedCFData.js';
+import CachedLCData from '../models/CachedLCData.js';
 import { buildCFDerivedStats } from '../utils/cfStats.js';
+import { apiError } from '../utils/validation.js';
 
 const getWeekStart = (date = new Date()) => {
   const d = new Date(date);
@@ -14,8 +16,8 @@ const getWeekStart = (date = new Date()) => {
 
 const syncGoalProgress = async (userId, goal) => {
   if (!goal) return null;
-  const cache = await CachedCFData.findOne({ userId });
-  if (!cache?.submissions?.length) return goal;
+  const cfCache = await CachedCFData.findOne({ userId });
+  const lcCache = await CachedLCData.findOne({ userId });
 
   // NOTE: Week boundaries use UTC. If a user is in UTC+5:30 (IST) and submits on Monday 00:30 IST,
   // it will be counted as Sunday 19:00 UTC (previous day). This is intentional for consistency.
@@ -24,17 +26,33 @@ const syncGoalProgress = async (userId, goal) => {
   const weekEnd = new Date(weekStart);
   weekEnd.setDate(weekStart.getDate() + 7);
 
-  // NOTE: Goal progress is synced from Codeforces submissions only.
-  // LeetCode submissions are not counted. This may be updated in a future version
-  // to include LeetCode stats for a more comprehensive tracking experience.
-  const acceptedThisWeek = (cache.submissions || []).filter((submission) => {
-    if (submission.verdict !== 'OK') return false;
-    const createdAt = submission.creationTimeSeconds ? new Date(submission.creationTimeSeconds * 1000) : null;
-    if (!createdAt) return false;
-    return createdAt >= weekStart && createdAt < weekEnd;
-  });
+  // Count Codeforces accepted submissions this week
+  let cfSolvedCount = 0;
+  if (cfCache?.submissions?.length) {
+    const acceptedThisWeek = (cfCache.submissions || []).filter((submission) => {
+      if (submission.verdict !== 'OK') return false;
+      const createdAt = submission.creationTimeSeconds ? new Date(submission.creationTimeSeconds * 1000) : null;
+      if (!createdAt) return false;
+      return createdAt >= weekStart && createdAt < weekEnd;
+    });
+    cfSolvedCount = new Set(acceptedThisWeek.map((submission) => `${submission.problem?.contestId ?? ''}-${submission.problem?.index ?? ''}`)).size;
+  }
 
-  const solvedCount = new Set(acceptedThisWeek.map((submission) => `${submission.problem?.contestId ?? ''}-${submission.problem?.index ?? ''}`)).size;
+  // Count LeetCode accepted submissions this week using calendar data
+  let lcSolvedCount = 0;
+  if (lcCache?.calendar?.length) {
+    lcSolvedCount = (lcCache.calendar || []).reduce((sum, entry) => {
+      if (!entry.date) return sum;
+      const entryDate = new Date(entry.date);
+      if (entryDate >= weekStart && entryDate < weekEnd) {
+        return sum + (entry.count || 0);
+      }
+      return sum;
+    }, 0);
+  }
+
+  // Total solved count from both platforms
+  const solvedCount = cfSolvedCount + lcSolvedCount;
   goal.solvedCount = solvedCount;
   goal.done = solvedCount >= goal.targetCount;
   await goal.save();
@@ -62,11 +80,12 @@ export const createGoal = async (req, res) => {
       runValidators: true,
     });
 
+    // Sync on create: if user just set a new goal, reflect current progress from CF submissions
     const syncedGoal = await syncGoalProgress(req.userId, goal);
-    res.status(201).json({ goal: syncedGoal || goal });
+    res.status(201).json({ success: true, goal: syncedGoal || goal });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'Unable to save goal' });
+    res.status(500).json({ success: false, message: 'Unable to save goal' });
   }
 };
 
@@ -74,11 +93,12 @@ export const getCurrentGoal = async (req, res) => {
   try {
     const weekStart = getWeekStart();
     const goal = await Goal.findOne({ userId: req.userId, weekStart });
-    const syncedGoal = goal ? await syncGoalProgress(req.userId, goal) : null;
-    res.json({ goal: syncedGoal || goal, weekStart });
+    // Return goal as-is; only sync on createGoal or explicit updateGoalProgress
+    // This avoids unnecessary re-scans of the submission cache on every dashboard load
+    res.json({ success: true, goal, weekStart });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'Unable to fetch goal' });
+    res.status(500).json({ success: false, message: 'Unable to fetch goal' });
   }
 };
 

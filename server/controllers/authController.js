@@ -2,6 +2,7 @@ import { validationResult } from 'express-validator';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import User from '../models/user.js';
+import { apiError } from '../utils/validation.js';
 
 const generateToken = (userId) => {
     const secret = process.env.JWT_SECRET;
@@ -14,7 +15,7 @@ const generateToken = (userId) => {
 export const register = async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-        return res.status(400).json({ message: errors.array().map((error) => error.msg).join(', ') });
+        return apiError(res, 400, errors.array().map((error) => error.msg).join(', '));
     }
 
     const { email, password } = req.body;
@@ -23,7 +24,7 @@ export const register = async (req, res) => {
     try {
         const existing = await User.findOne({ email: normalizedEmail });
         if (existing) {
-            return res.status(400).json({ message: 'Email already registered' });
+            return apiError(res, 400, 'Email already registered');
         }
 
         const passwordHash = await bcrypt.hash(password, 10);
@@ -32,17 +33,17 @@ export const register = async (req, res) => {
         await user.save();
 
         const token = generateToken(user._id);
-        res.status(201).json({ token, user: { id: user._id, email: user.email, cfHandle: user.cfHandle, lcHandle: user.lcHandle } });
+        res.status(201).json({ success: true, token, user: { id: user._id, email: user.email, cfHandle: user.cfHandle, lcHandle: user.lcHandle } });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ message: 'Unable to register user' });
+        apiError(res, 500, 'Unable to register user');
     }
 };
 
 export const login = async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-        return res.status(400).json({ message: errors.array().map((error) => error.msg).join(', ') });
+        return apiError(res, 400, errors.array().map((error) => error.msg).join(', '));
     }
 
     const { email, password } = req.body;
@@ -50,19 +51,19 @@ export const login = async (req, res) => {
     try {
         const user = await User.findOne({ email });
         if (!user) {
-            return res.status(401).json({ message: 'Invalid credentials' });
+            return apiError(res, 401, 'Invalid credentials');
         }
 
         const validPassword = await bcrypt.compare(password, user.passwordHash);
         if (!validPassword) {
-            return res.status(401).json({ message: 'Invalid credentials' });
+            return apiError(res, 401, 'Invalid credentials');
         }
 
         const token = generateToken(user._id);
-        res.json({ token, user: { id: user._id, email: user.email, cfHandle: user.cfHandle, lcHandle: user.lcHandle } });
+        res.json({ success: true, token, user: { id: user._id, email: user.email, cfHandle: user.cfHandle, lcHandle: user.lcHandle } });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ message: 'Unable to log in' });
+        apiError(res, 500, 'Unable to log in');
     }
 };
 
@@ -70,12 +71,12 @@ export const getProfile = async (req, res) => {
     try {
         const user = await User.findById(req.userId).select('-passwordHash');
         if (!user) {
-            return res.status(404).json({ message: 'User not found' });
+            return apiError(res, 404, 'User not found');
         }
-        res.json({ user });
+        res.json({ success: true, user });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ message: 'Unable to fetch profile' });
+        apiError(res, 500, 'Unable to fetch profile');
     }
 };
 

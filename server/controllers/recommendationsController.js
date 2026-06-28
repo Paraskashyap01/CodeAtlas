@@ -4,13 +4,14 @@ import User from '../models/user.js';
 import { fetchCFData, isCacheFresh } from '../services/codeforcesService.js';
 import { generateRecommendations } from '../services/recommendationService.js';
 import { buildCFDerivedStats } from '../utils/cfStats.js';
+import { apiError } from '../utils/validation.js';
 
 const todayKey = () => new Date().toISOString().slice(0, 10);
 
 export const getRecommendations = async (req, res) => {
   try {
     const user = await User.findById(req.userId);
-    if (!user?.cfHandle) return res.status(400).json({ message: 'Codeforces handle not set' });
+    if (!user?.cfHandle) return apiError(res, 400, 'Codeforces handle not set');
 
     const cacheDate = todayKey();
     const existing = await RecommendationCache.findOne({ userId: req.userId, cacheDate });
@@ -48,9 +49,9 @@ export const getRecommendations = async (req, res) => {
       generatedBy: ai.generatedBy,
     });
 
-    res.json(saved);
+    res.json({ success: true, ...saved.toObject() });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'Unable to generate recommendations', error: error.message });
+    apiError(res, 500, 'Unable to generate recommendations');
   }
 };

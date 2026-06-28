@@ -2,13 +2,19 @@ import express from 'express';
 import User from '../models/user.js';
 import CachedCFData from '../models/CachedCFData.js';
 import authMiddleware from '../middleware/auth.js';
+import { isValidObjectId, apiError } from '../utils/validation.js';
 
 const router = express.Router();
 
 router.get('/leaderboard', authMiddleware, async (req, res) => {
   try {
+    // Pagination: default 20 per page, max 100
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 20));
+    const skip = (page - 1) * limit;
+
     // Use aggregation to join User with CachedCFData for real CP stats
-    const leaderboard = await User.aggregate([
+    const totalResult = await User.aggregate([
       {
         $lookup: {
           from: 'cachedcfdatas',
@@ -28,15 +34,33 @@ router.get('/leaderboard', authMiddleware, async (req, res) => {
           cfSolvedCount: { $arrayElemAt: ['$cfData.solvedCount', 0] },
         },
       },
+      { $sort: { cfHandle: -1, cfRating: -1, cfSolvedCount: -1, email: 1 } },
+      { $count: 'total' },
+    ]);
+    const total = totalResult[0]?.total || 0;
+
+    const leaderboard = await User.aggregate([
       {
-        $sort: {
-          // Sort by: has CF handle → CF rating (desc) → problems solved (desc) → name
-          cfHandle: -1,
-          cfRating: -1,
-          cfSolvedCount: -1,
-          email: 1,
+        $lookup: {
+          from: 'cachedcfdatas',
+          localField: '_id',
+          foreignField: 'userId',
+          as: 'cfData',
         },
       },
+      {
+        $project: {
+          email: 1,
+          cfHandle: 1,
+          lcHandle: 1,
+          friends: 1,
+          cfRating: { $arrayElemAt: ['$cfData.currentRating', 0] },
+          cfSolvedCount: { $arrayElemAt: ['$cfData.solvedCount', 0] },
+        },
+      },
+      { $sort: { cfHandle: -1, cfRating: -1, cfSolvedCount: -1, email: 1 } },
+      { $skip: skip },
+      { $limit: limit },
     ]);
 
     const leaderboardData = leaderboard.map((user) => ({
@@ -49,26 +73,37 @@ router.get('/leaderboard', authMiddleware, async (req, res) => {
       friendCount: user.friends?.length || 0,
     }));
 
-    res.json({ leaderboard: leaderboardData });
+    res.json({ success: true, leaderboard: leaderboardData, pagination: { page, limit, total, pages: Math.ceil(total / limit) } });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'Unable to load leaderboard' });
+    apiError(res, 500, 'Unable to load leaderboard');
   }
 });
 
 router.post('/add', authMiddleware, async (req, res) => {
   try {
     const targetId = req.body.userId;
-    if (!targetId) return res.status(400).json({ message: 'userId is required' });
+    if (!targetId) {
+      return apiError(res, 400, 'userId is required');
+    }
+
+    // Validate ObjectId format
+    if (!isValidObjectId(targetId)) {
+      return apiError(res, 400, 'Invalid userId format');
+    }
 
     const currentUser = await User.findById(req.userId);
     const targetUser = await User.findById(targetId);
 
-    if (!currentUser || !targetUser) return res.status(404).json({ message: 'User not found' });
-    if (currentUser._id.equals(targetUser._id)) return res.status(400).json({ message: 'You cannot add yourself' });
+    if (!currentUser || !targetUser) {
+      return apiError(res, 404, 'User not found');
+    }
+    if (currentUser._id.equals(targetUser._id)) {
+      return apiError(res, 400, 'You cannot add yourself');
+    }
     // Validate that target user has at least one handle set (CF or LC)
     if (!targetUser.cfHandle && !targetUser.lcHandle) {
-      return res.status(400).json({ message: 'Target user must have a Codeforces or LeetCode handle set' });
+      return apiError(res, 400, 'Target user must have a Codeforces or LeetCode handle set');
     }
 
     if (!currentUser.friends.includes(targetUser._id)) {
@@ -76,10 +111,10 @@ router.post('/add', authMiddleware, async (req, res) => {
       await currentUser.save();
     }
 
-    res.json({ friends: currentUser.friends });
+    res.json({ success: true, friends: currentUser.friends });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'Unable to add friend' });
+    apiError(res, 500, 'Unable to add friend');
   }
 });
 
