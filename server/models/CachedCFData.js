@@ -1,4 +1,4 @@
-import mongoose from 'mongoose';
+import mongoose from "mongoose";
 
 const cfSchema = new mongoose.Schema({
   userId: {
@@ -7,18 +7,28 @@ const cfSchema = new mongoose.Schema({
     required: true,
     unique: true,
   },
-  handle: {
-    type: String,
-    required: true,
-  },
+  handle: String,
+
   ratingHistory: {
     type: Array,
     default: [],
   },
+
   submissions: {
     type: Array,
     default: [],
   },
+
+  currentRating: {
+    type: Number,
+    default: null,
+  },
+
+  solvedCount: {
+    type: Number,
+    default: 0,
+  },
+
   fetchedAt: {
     type: Date,
     default: Date.now,
@@ -26,4 +36,5 @@ const cfSchema = new mongoose.Schema({
 });
 
 const CachedCFData = mongoose.model('CachedCFData', cfSchema);
+
 export default CachedCFData;
