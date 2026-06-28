@@ -8,6 +8,7 @@ import GoalsPage from './pages/GoalsPage.jsx';
 import PublicProfilePage from './pages/PublicProfilePage.jsx';
 import FriendsPage from './pages/FriendsPage.jsx';
 import LeetCodePage from './pages/LeetCodePage.jsx';
+import CodeforcesPage from './pages/CodeforcesPage.jsx';
 import { useAuth } from './context/AuthContext.jsx';
 
 const ProtectedRoute = ({ children }) => {
@@ -32,6 +33,7 @@ function App() {
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
       <Route path="/leetcode" element={<ProtectedRoute><LeetCodePage /></ProtectedRoute>} />
+      <Route path="/codeforces" element={<ProtectedRoute><CodeforcesPage /></ProtectedRoute>} />
       <Route path="/recommendations" element={<ProtectedRoute><RecommendationsPage /></ProtectedRoute>} />
       <Route path="/notes" element={<ProtectedRoute><NotesPage /></ProtectedRoute>} />
       <Route path="/goals" element={<ProtectedRoute><GoalsPage /></ProtectedRoute>} />

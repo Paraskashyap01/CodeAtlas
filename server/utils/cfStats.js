@@ -10,6 +10,14 @@ const problemKey = (problem = {}) => {
   return `${problem.contestId}-${problem.index}`;
 };
 
+// Codeforces problem URLs follow a predictable pattern: contests with a
+// 4-digit-or-more contestId that look like "Div" rounds use /problemset/problem/,
+// which works for every contest ID/index combination on the site.
+const buildCFProblemUrl = (contestId, index) => {
+  if (!contestId || !index) return null;
+  return `https://codeforces.com/problemset/problem/${contestId}/${index}`;
+};
+
 const dayKeyFromSeconds = (seconds) => {
   if (!seconds) return null;
   return new Date(seconds * 1000).toISOString().slice(0, 10);
@@ -64,6 +72,7 @@ export const buildCFDerivedStats = (submissions = []) => {
       problemName: problem.name,
       problemRating: problem.rating ?? null,
       problemIndex: problem.index,
+      problemUrl: buildCFProblemUrl(submission.contestId ?? problem.contestId, problem.index),
       tags,
     });
   }

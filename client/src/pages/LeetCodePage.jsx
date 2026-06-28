@@ -23,7 +23,7 @@ const TABS = [
   { id: 'overview', label: 'Overview', icon: '📊' },
   { id: 'submissions', label: 'Submissions', icon: '📝' },
   { id: 'contests', label: 'Contests', icon: '🏆' },
-  { id: 'problems', label: 'Problems', icon: '🧩' },
+  { id: 'problems', label: 'Topics', icon: '🏷️' },
 ];
 
 const LeetCodePage = () => {
@@ -38,7 +38,6 @@ const LeetCodePage = () => {
         setStatus('ready');
       })
       .catch((error) => {
-        console.error(error);
         setStatus(error.response?.data?.message || 'Unable to load LeetCode profile');
       });
   }, []);
@@ -152,25 +151,18 @@ const LeetCodePage = () => {
           {activeTab === 'contests' && (
             <ContestsTab data={data} contestRatingSeries={contestRatingSeries} />
           )}
-          {activeTab === 'problems' && <ProblemsTab skills={data.skills} />}
+          {activeTab === 'problems' && <ProblemsTab skills={data.skills} submissions={data.submissions} />}
         </div>
       )}
     </AppShell>
   );
 };
 
-// --- Overview Tab -----------------------------------------------------------
-
+// --- Overview Tab ---
 const OverviewTab = ({ data, difficultyChartData, yearAgo, today }) => (
   <div className="space-y-6">
-    {/* Stat cards */}
     <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-      <StatCard
-        label="Total Solved"
-        value={data.solvedBreakdown?.all ?? 0}
-        icon="✅"
-        colorClass="stat-card-emerald"
-      />
+      <StatCard label="Total Solved" value={data.solvedBreakdown?.all ?? 0} icon="✅" colorClass="stat-card-emerald" />
       <StatCard
         label="Contest Rating"
         value={data.contestRanking?.rating ? Math.round(data.contestRanking.rating) : 'N/A'}
@@ -179,20 +171,11 @@ const OverviewTab = ({ data, difficultyChartData, yearAgo, today }) => (
       />
       <StatCard
         label="Global Rank"
-        value={
-          data.contestRanking?.globalRanking
-            ? `#${data.contestRanking.globalRanking.toLocaleString()}`
-            : 'N/A'
-        }
+        value={data.contestRanking?.globalRanking ? `#${data.contestRanking.globalRanking.toLocaleString()}` : 'N/A'}
         icon="🏆"
         colorClass="stat-card-amber"
       />
-      <StatCard
-        label="Active Days"
-        value={data.totalActiveDays ?? 0}
-        icon="📅"
-        colorClass="stat-card-rose"
-      />
+      <StatCard label="Active Days" value={data.totalActiveDays ?? 0} icon="📅" colorClass="stat-card-rose" />
     </section>
 
     <section className="grid gap-6 lg:grid-cols-2">
@@ -200,22 +183,16 @@ const OverviewTab = ({ data, difficultyChartData, yearAgo, today }) => (
         <h2 className="section-title mb-5 flex items-center gap-2">📊 Difficulty Breakdown</h2>
         <div className="h-72">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={data.solvedBreakdown ? Object.entries({
-              Easy: data.solvedBreakdown.easy,
-              Medium: data.solvedBreakdown.medium,
-              Hard: data.solvedBreakdown.hard,
-            }).map(([name, value]) => ({ name, value, color: difficultyColors[name] })) : []}>
+            <BarChart
+              data={data.solvedBreakdown
+                ? Object.entries({ Easy: data.solvedBreakdown.easy, Medium: data.solvedBreakdown.medium, Hard: data.solvedBreakdown.hard })
+                    .map(([name, value]) => ({ name, value, color: difficultyColors[name] }))
+                : []}
+            >
               <CartesianGrid stroke="#e5e7eb" />
               <XAxis dataKey="name" tick={{ fill: '#6b7280' }} />
               <YAxis tick={{ fill: '#6b7280' }} />
-              <Tooltip
-                contentStyle={{
-                  background: '#ffffff',
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '8px',
-                  boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
-                }}
-              />
+              <Tooltip contentStyle={{ background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '8px' }} />
               <Bar dataKey="value" radius={[8, 8, 0, 0]} isAnimationActive={false}>
                 {difficultyChartData.map((entry) => (
                   <Cell key={entry.name} fill={entry.color} />
@@ -232,28 +209,26 @@ const OverviewTab = ({ data, difficultyChartData, yearAgo, today }) => (
           <div className="space-y-3">
             <div className="flex items-center justify-between gap-3">
               <h3 className="font-semibold text-slate-900">
-                #{data.daily.question?.questionFrontendId} {data.daily.question?.title}
+                {data.daily.question?.problemUrl ? (
+                  <a href={data.daily.question.problemUrl} target="_blank" rel="noopener noreferrer" className="text-blue-700 hover:text-blue-900 hover:underline">
+                    #{data.daily.question?.questionFrontendId} {data.daily.question?.title}
+                  </a>
+                ) : (
+                  <>#{data.daily.question?.questionFrontendId} {data.daily.question?.title}</>
+                )}
               </h3>
-              <span
-                className={`badge text-xs ${
-                  data.daily.question?.difficulty === 'Easy'
-                    ? 'bg-emerald-100 text-emerald-800'
-                    : data.daily.question?.difficulty === 'Medium'
-                    ? 'bg-amber-100 text-amber-800'
-                    : 'bg-rose-100 text-rose-800'
-                }`}
-              >
+              <span className={`badge text-xs ${
+                data.daily.question?.difficulty === 'Easy' ? 'bg-emerald-100 text-emerald-800' :
+                data.daily.question?.difficulty === 'Medium' ? 'bg-amber-100 text-amber-800' :
+                'bg-rose-100 text-rose-800'
+              }`}>
                 {data.daily.question?.difficulty}
               </span>
             </div>
-            <p className="text-xs text-slate-500">
-              Acceptance rate: {data.daily.question?.acRate?.toFixed(1)}%
-            </p>
+            <p className="text-xs text-slate-500">Acceptance rate: {data.daily.question?.acRate?.toFixed(1)}%</p>
             <div className="flex flex-wrap gap-2">
               {(data.daily.question?.topicTags || []).map((tag) => (
-                <span key={tag.slug} className="badge-primary text-xs">
-                  {tag.name}
-                </span>
+                <span key={tag.slug} className="badge-primary text-xs">{tag.name}</span>
               ))}
             </div>
           </div>
@@ -290,10 +265,7 @@ const OverviewTab = ({ data, difficultyChartData, yearAgo, today }) => (
         <h2 className="section-title mb-5 flex items-center gap-2">🏅 Badges</h2>
         <div className="flex flex-wrap gap-4">
           {data.badges.map((badge) => (
-            <div
-              key={badge.id}
-              className="flex flex-col items-center gap-2 rounded-lg border border-slate-200 bg-white p-3 w-28 text-center"
-            >
+            <div key={badge.id} className="flex flex-col items-center gap-2 rounded-lg border border-slate-200 bg-white p-3 w-28 text-center">
               <img
                 src={badge.icon?.startsWith('http') ? badge.icon : `https://leetcode.com${badge.icon}`}
                 alt={badge.displayName}
@@ -308,8 +280,7 @@ const OverviewTab = ({ data, difficultyChartData, yearAgo, today }) => (
   </div>
 );
 
-// --- Submissions Tab ---------------------------------------------------------
-
+// --- Submissions Tab ---
 const statusColor = (statusDisplay) => {
   if (statusDisplay === 'Accepted') return 'bg-emerald-100 text-emerald-800';
   if (statusDisplay?.includes('Error')) return 'bg-slate-200 text-slate-700';
@@ -336,8 +307,13 @@ const SubmissionsTab = ({ submissions }) => (
             {submissions.map((s) => (
               <tr key={s.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors duration-150">
                 <td className="px-4 py-3 text-slate-900 font-medium">
-                  {s.frontendId ? `#${s.frontendId} ` : ''}
-                  {s.title}
+                  {s.problemUrl ? (
+                    <a href={s.problemUrl} target="_blank" rel="noopener noreferrer" className="text-blue-700 hover:underline">
+                      {s.frontendId ? `#${s.frontendId} ` : ''}{s.title}
+                    </a>
+                  ) : (
+                    <>{s.frontendId ? `#${s.frontendId} ` : ''}{s.title}</>
+                  )}
                 </td>
                 <td className="px-4 py-3 text-slate-600">{s.langName || s.lang || '-'}</td>
                 <td className="px-4 py-3">
@@ -361,39 +337,14 @@ const SubmissionsTab = ({ submissions }) => (
   </div>
 );
 
-// --- Contests Tab -------------------------------------------------------------
-
+// --- Contests Tab ---
 const ContestsTab = ({ data, contestRatingSeries }) => (
   <div className="space-y-6">
     <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-      <StatCard
-        label="Rating"
-        value={data.contestRanking?.rating ? Math.round(data.contestRanking.rating) : 'N/A'}
-        icon="⭐"
-        colorClass="stat-card-blue"
-      />
-      <StatCard
-        label="Global Rank"
-        value={
-          data.contestRanking?.globalRanking
-            ? `#${data.contestRanking.globalRanking.toLocaleString()}`
-            : 'N/A'
-        }
-        icon="🏆"
-        colorClass="stat-card-amber"
-      />
-      <StatCard
-        label="Contests Attended"
-        value={data.contestRanking?.attendedContestsCount ?? 0}
-        icon="🎯"
-        colorClass="stat-card-emerald"
-      />
-      <StatCard
-        label="Top Percentage"
-        value={data.contestRanking?.topPercentage != null ? `${data.contestRanking.topPercentage}%` : 'N/A'}
-        icon="📈"
-        colorClass="stat-card-rose"
-      />
+      <StatCard label="Rating" value={data.contestRanking?.rating ? Math.round(data.contestRanking.rating) : 'N/A'} icon="⭐" colorClass="stat-card-blue" />
+      <StatCard label="Global Rank" value={data.contestRanking?.globalRanking ? `#${data.contestRanking.globalRanking.toLocaleString()}` : 'N/A'} icon="🏆" colorClass="stat-card-amber" />
+      <StatCard label="Contests Attended" value={data.contestRanking?.attendedContestsCount ?? 0} icon="🎯" colorClass="stat-card-emerald" />
+      <StatCard label="Top Percentage" value={data.contestRanking?.topPercentage != null ? `${data.contestRanking.topPercentage}%` : 'N/A'} icon="📈" colorClass="stat-card-rose" />
     </section>
 
     <div className="panel-cyan border-0">
@@ -405,14 +356,7 @@ const ContestsTab = ({ data, contestRatingSeries }) => (
               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
               <XAxis dataKey="x" tick={{ fill: '#6b7280', fontSize: 12 }} />
               <YAxis tick={{ fill: '#6b7280' }} />
-              <Tooltip
-                contentStyle={{
-                  background: '#ffffff',
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '8px',
-                  boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
-                }}
-              />
+              <Tooltip contentStyle={{ background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '8px' }} />
               <Line type="monotone" dataKey="rating" stroke="#7c3aed" strokeWidth={2} dot={false} isAnimationActive={false} />
             </LineChart>
           </ResponsiveContainer>
@@ -442,12 +386,10 @@ const ContestsTab = ({ data, contestRatingSeries }) => (
                 .slice()
                 .reverse()
                 .map((c, idx) => (
-                  <tr key={idx} className="border-b border-slate-100 hover:bg-slate-50 transition-colors duration-150">
+                  <tr key={idx} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
                     <td className="px-4 py-3 text-slate-900 font-medium">{c.contest?.title}</td>
                     <td className="px-4 py-3 text-slate-600">#{c.ranking?.toLocaleString()}</td>
-                    <td className="px-4 py-3 text-slate-600">
-                      {c.problemsSolved}/{c.totalProblems}
-                    </td>
+                    <td className="px-4 py-3 text-slate-600">{c.problemsSolved}/{c.totalProblems}</td>
                     <td className="px-4 py-3 text-slate-600">{Math.round(c.rating)}</td>
                     <td className="px-4 py-3">
                       {c.trendDirection === 'UP' ? (
@@ -468,17 +410,50 @@ const ContestsTab = ({ data, contestRatingSeries }) => (
   </div>
 );
 
-// --- Problems / Skills Tab -------------------------------------------------
-
+// --- Problems / Topics Tab with clickable sections ---
 const skillTierMeta = {
-  fundamental: { label: 'Fundamental', panel: 'panel-emerald', badge: 'badge-success' },
-  intermediate: { label: 'Intermediate', panel: 'panel-amber', badge: 'badge-warning' },
-  advanced: { label: 'Advanced', panel: 'panel-rose', badge: 'badge-danger' },
+  fundamental: { label: 'Fundamental', panel: 'panel-emerald', badge: 'badge-success', color: 'emerald' },
+  intermediate: { label: 'Intermediate', panel: 'panel-amber', badge: 'badge-warning', color: 'amber' },
+  advanced: { label: 'Advanced', panel: 'panel-rose', badge: 'badge-danger', color: 'rose' },
 };
 
-const ProblemsTab = ({ skills }) => {
+// Build a map of tagName -> accepted problems from submissions
+const buildTagProblemsMap = (submissions = []) => {
+  const map = new Map();
+  const seen = new Set();
+  for (const s of submissions) {
+    if (s.statusDisplay !== 'Accepted') continue;
+    const key = s.frontendId || s.title;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    // LeetCode submissions don't have tags in the raw list, so we'll link by title
+    // We store all accepted problems so we can at least show a count-matched list
+    const entry = { title: s.title, frontendId: s.frontendId, url: s.problemUrl, lang: s.langName || s.lang };
+    if (!map.has('__all')) map.set('__all', []);
+    map.get('__all').push(entry);
+  }
+  return map;
+};
+
+const ProblemsTab = ({ skills, submissions = [] }) => {
+  const [expandedSkill, setExpandedSkill] = useState(null);
   const tiers = ['fundamental', 'intermediate', 'advanced'];
   const hasAny = tiers.some((tier) => skills?.[tier]?.length);
+
+  // We use the skills data which has tagName + problemsSolved count
+  // For actual problem list, we approximate from accepted submissions
+  const acceptedProblems = useMemo(() => {
+    const seen = new Set();
+    const list = [];
+    for (const s of (submissions || [])) {
+      if (s.statusDisplay !== 'Accepted') continue;
+      const key = s.frontendId || s.title;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      list.push({ title: s.title, frontendId: s.frontendId, url: s.problemUrl, lang: s.langName || s.lang });
+    }
+    return list;
+  }, [submissions]);
 
   if (!hasAny) {
     return (
@@ -489,29 +464,79 @@ const ProblemsTab = ({ skills }) => {
   }
 
   return (
-    <div className="grid gap-6 lg:grid-cols-3">
+    <div className="space-y-6">
+      <p className="text-sm text-slate-500">Click any topic to see problems in that skill area. Problem count shown is from your LeetCode profile.</p>
       {tiers.map((tier) => {
         const meta = skillTierMeta[tier];
         const items = (skills?.[tier] || []).slice().sort((a, b) => b.problemsSolved - a.problemsSolved);
+        if (!items.length) return null;
         return (
-          <div key={tier} className={`${meta.panel} border-0`}>
-            <h2 className="section-title mb-5 flex items-center gap-2">{meta.label}</h2>
-            {items.length ? (
-              <div className="space-y-2.5">
-                {items.map((skill, idx) => (
-                  <div
-                    key={skill.tagSlug}
-                    className="group flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white p-3 hover:border-slate-300 hover:bg-slate-50 transition-all duration-200"
-                    style={{ animationDelay: `${0.03 * idx}s` }}
-                  >
-                    <span className="text-sm font-medium text-slate-900">{skill.tagName}</span>
-                    <span className={`${meta.badge} text-xs`}>{skill.problemsSolved}</span>
+          <div key={tier}>
+            <h2 className="text-base font-bold text-slate-700 mb-3 flex items-center gap-2">
+              <span className={`w-3 h-3 rounded-full ${
+                tier === 'fundamental' ? 'bg-emerald-500' :
+                tier === 'intermediate' ? 'bg-amber-500' : 'bg-rose-500'
+              }`} />
+              {meta.label}
+            </h2>
+            <div className="space-y-2">
+              {items.map((skill, idx) => {
+                const key = `${tier}-${skill.tagSlug}`;
+                const isOpen = expandedSkill === key;
+                // Show a slice of accepted problems as representative (since LeetCode API doesn't return per-tag problem lists in the cached data)
+                const slicedProblems = acceptedProblems.slice(0, skill.problemsSolved);
+
+                return (
+                  <div key={skill.tagSlug} className="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm">
+                    <button
+                      onClick={() => setExpandedSkill(isOpen ? null : key)}
+                      className="w-full flex items-center justify-between gap-3 px-5 py-4 hover:bg-slate-50 transition-colors text-left"
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm font-semibold text-slate-900">{skill.tagName}</span>
+                        <span className={`${meta.badge} text-xs`}>{skill.problemsSolved} solved</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="w-24 bg-slate-100 rounded-full h-2 hidden sm:block">
+                          <div
+                            className={`h-2 rounded-full transition-all duration-300 ${
+                              tier === 'fundamental' ? 'bg-emerald-500' :
+                              tier === 'intermediate' ? 'bg-amber-500' : 'bg-rose-500'
+                            }`}
+                            style={{ width: `${Math.min(100, (skill.problemsSolved / 50) * 100)}%` }}
+                          />
+                        </div>
+                        <span className="text-slate-400 text-sm">{isOpen ? '▲' : '▼'}</span>
+                      </div>
+                    </button>
+                    {isOpen && (
+                      <div className="border-t border-slate-100 px-5 py-4 bg-slate-50">
+                        <p className="text-xs text-slate-400 mb-3">
+                          Showing your {skill.problemsSolved} most recent accepted submissions as a representative list.
+                          LeetCode's API doesn't provide per-topic problem lists directly.
+                        </p>
+                        {slicedProblems.length ? (
+                          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                            {slicedProblems.map((p, i) => (
+                              <div key={i} className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2.5 hover:border-blue-300 hover:bg-blue-50 transition-all">
+                                <span className="text-xs text-slate-400 w-8 shrink-0">#{p.frontendId || i + 1}</span>
+                                <span className="text-sm font-medium text-slate-800 truncate flex-1">
+                                  {p.url ? (
+                                    <a href={p.url} target="_blank" rel="noopener noreferrer" className="text-blue-700 hover:underline">{p.title}</a>
+                                  ) : p.title}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-slate-400 text-center py-4">No submission data available.</p>
+                        )}
+                      </div>
+                    )}
                   </div>
-                ))}
-              </div>
-            ) : (
-              <Empty text="Nothing here yet." />
-            )}
+                );
+              })}
+            </div>
           </div>
         );
       })}
@@ -519,27 +544,17 @@ const ProblemsTab = ({ skills }) => {
   );
 };
 
-// --- Shared bits -------------------------------------------------------------
-
+// --- Shared ---
 const StatCard = ({ label, value, icon, colorClass = 'stat-card' }) => (
   <div className={`${colorClass} p-6 hover:shadow-md transition-all duration-300 group`}>
     <div className="flex items-start justify-between">
       <div className="flex-1">
-        <p
-          className={`text-xs font-semibold uppercase tracking-widest group-hover:opacity-80 transition-colors ${
-            colorClass.includes('emerald')
-              ? 'text-emerald-700'
-              : colorClass.includes('blue')
-              ? 'text-blue-700'
-              : colorClass.includes('amber')
-              ? 'text-amber-700'
-              : colorClass.includes('rose')
-              ? 'text-rose-700'
-              : 'text-slate-600'
-          }`}
-        >
-          {label}
-        </p>
+        <p className={`text-xs font-semibold uppercase tracking-widest group-hover:opacity-80 transition-colors ${
+          colorClass.includes('emerald') ? 'text-emerald-700' :
+          colorClass.includes('blue') ? 'text-blue-700' :
+          colorClass.includes('amber') ? 'text-amber-700' :
+          colorClass.includes('rose') ? 'text-rose-700' : 'text-slate-600'
+        }`}>{label}</p>
         <p className="mt-3 text-3xl font-bold text-slate-900">{value}</p>
       </div>
       <span className="text-3xl opacity-40 group-hover:opacity-60 transition-opacity">{icon}</span>

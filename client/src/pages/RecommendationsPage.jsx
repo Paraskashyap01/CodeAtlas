@@ -94,7 +94,18 @@ const RecommendationsPage = () => {
                   >
                     <div className="flex flex-col gap-3">
                       <h3 className="font-semibold text-slate-900 group-hover:text-blue-700 transition-colors">
-                        {rec.title}
+                        {rec.url ? (
+                          <a
+                            href={rec.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="hover:underline"
+                          >
+                            {rec.title}
+                          </a>
+                        ) : (
+                          rec.title
+                        )}
                       </h3>
                       <div className="flex flex-wrap gap-2">
                         <span className="badge-primary text-xs">{rec.platform}</span>
