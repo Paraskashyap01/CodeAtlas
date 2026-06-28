@@ -1,30 +1,55 @@
 import express from 'express';
 import User from '../models/user.js';
+import CachedCFData from '../models/CachedCFData.js';
 import authMiddleware from '../middleware/auth.js';
 
 const router = express.Router();
 
 router.get('/leaderboard', authMiddleware, async (req, res) => {
   try {
-    const users = await User.find({}).select('email cfHandle lcHandle friends createdAt').lean();
-    const leaderboard = users
-      .map((user) => ({
-        id: user._id,
-        displayName: user.cfHandle || user.lcHandle || user.email,
-        cfHandle: user.cfHandle || null,
-        lcHandle: user.lcHandle || null,
-        friendCount: user.friends?.length || 0,
-      }))
-      // Sort by whether user has active handles (those with CF/LC are ranked higher)
-      // then by friend count, then alphabetically
-      .sort((a, b) => {
-        const aHasHandle = a.cfHandle || a.lcHandle ? 1 : 0;
-        const bHasHandle = b.cfHandle || b.lcHandle ? 1 : 0;
-        if (bHasHandle !== aHasHandle) return bHasHandle - aHasHandle;
-        return b.friendCount - a.friendCount || a.displayName.localeCompare(b.displayName);
-      });
+    // Use aggregation to join User with CachedCFData for real CP stats
+    const leaderboard = await User.aggregate([
+      {
+        $lookup: {
+          from: 'cachedcfdatas',
+          localField: '_id',
+          foreignField: 'userId',
+          as: 'cfData',
+        },
+      },
+      {
+        $project: {
+          email: 1,
+          cfHandle: 1,
+          lcHandle: 1,
+          friends: 1,
+          // Extract CF stats from the joined data
+          cfRating: { $arrayElemAt: ['$cfData.currentRating', 0] },
+          cfSolvedCount: { $arrayElemAt: ['$cfData.solvedCount', 0] },
+        },
+      },
+      {
+        $sort: {
+          // Sort by: has CF handle → CF rating (desc) → problems solved (desc) → name
+          cfHandle: -1,
+          cfRating: -1,
+          cfSolvedCount: -1,
+          email: 1,
+        },
+      },
+    ]);
 
-    res.json({ leaderboard });
+    const leaderboardData = leaderboard.map((user) => ({
+      id: user._id,
+      displayName: user.cfHandle || user.lcHandle || user.email,
+      cfHandle: user.cfHandle || null,
+      lcHandle: user.lcHandle || null,
+      cfRating: user.cfRating || null,
+      cfSolvedCount: user.cfSolvedCount || null,
+      friendCount: user.friends?.length || 0,
+    }));
+
+    res.json({ leaderboard: leaderboardData });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Unable to load leaderboard' });

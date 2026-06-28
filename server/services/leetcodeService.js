@@ -67,8 +67,31 @@ export const fetchLCData = async (handle) => {
       : 'LeetCode profile data is temporarily unavailable.';
     throw new Error(message);
   }
+};
 
+export const fetchLCCalendar = async (handle) => {
+  try {
+    // Fetch calendar from alfa-leetcode-api which provides per-day submission counts
+    const response = await axios.get(`https://alfa-leetcode-api.onrender.com/${handle}/calendar`, {
+      timeout: 10000,
+    });
 
+    if (!response.data?.calendar) {
+      return [];
+    }
+
+    // Transform calendar data to match our format: [{ date, count }]
+    const calendarData = Object.entries(response.data.calendar).map(([timestamp, count]) => ({
+      date: new Date(parseInt(timestamp) * 1000).toISOString().split('T')[0],
+      count: count,
+    }));
+
+    return calendarData;
+  } catch (error) {
+    // Calendar fetch is optional - don't throw, just return empty array
+    console.warn(`Unable to fetch LeetCode calendar for ${handle}:`, error.message);
+    return [];
+  }
 };
 
 export const isCacheFresh = (fetchedAt) => {

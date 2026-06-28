@@ -15,6 +15,11 @@ const lcSchema = new mongoose.Schema({
     type: Object,
     default: {},
   },
+  calendar: {
+    type: Array,
+    default: [],
+    // Format: [{ date: '2025-01-15', count: 3 }, ...]
+  },
   fetchedAt: {
     type: Date,
     default: Date.now,
