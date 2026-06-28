@@ -33,21 +33,21 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-dark-950">
+    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-blue-50 via-white to-slate-50">
       <div className="w-full max-w-md">
         {/* Logo / Header */}
         <div className="text-center mb-8 animate-fade-in-up">
-          <h1 className="text-4xl font-bold text-white mb-2">CP Tracker</h1>
-          <p className="text-zinc-400">Track your competitive programming growth</p>
+          <h1 className="text-4xl font-bold text-slate-900 mb-2">CP Tracker</h1>
+          <p className="text-slate-600">Track your competitive programming growth</p>
         </div>
 
         {/* Card */}
-        <div className="rounded-2xl border border-zinc-800/50 bg-gradient-to-br from-zinc-900/60 to-zinc-800/30 backdrop-blur-sm p-8 shadow-xl animate-fade-in-up">
-          <h2 className="text-2xl font-bold text-white mb-6">Sign in</h2>
+        <div className="rounded-2xl border border-slate-200/60 bg-gradient-to-br from-white/95 via-blue-50/30 to-slate-50/60 backdrop-blur-sm p-8 shadow-lg animate-fade-in-up">
+          <h2 className="text-2xl font-bold text-slate-900 mb-6">Sign in</h2>
 
           {/* Error Message */}
           {error && (
-            <div className="mb-6 p-4 rounded-lg border border-rose-500/30 bg-rose-500/10 text-rose-200 text-sm animate-fade-in-up">
+            <div className="mb-6 p-4 rounded-lg border border-rose-200 bg-rose-50 text-rose-800 text-sm animate-fade-in-up">
               ✗ {error}
             </div>
           )}
@@ -55,24 +55,24 @@ const LoginPage = () => {
           {/* Form */}
           <form className="space-y-4" onSubmit={handleSubmit}>
             <label className="block">
-              <span className="text-sm font-medium text-zinc-300 mb-2 block">Email Address</span>
+              <span className="text-sm font-medium text-slate-700 mb-2 block">Email Address</span>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full rounded-lg border border-zinc-700/50 bg-zinc-900/50 px-4 py-2.5 text-zinc-100 placeholder-zinc-500 outline-none focus:border-blue-400/50 focus:bg-zinc-900/80 transition-all duration-200"
+                className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-slate-900 placeholder-slate-400 outline-none focus:border-blue-500 focus:bg-blue-50/30 transition-all duration-200"
                 placeholder="you@example.com"
                 required
               />
             </label>
 
             <label className="block">
-              <span className="text-sm font-medium text-zinc-300 mb-2 block">Password</span>
+              <span className="text-sm font-medium text-slate-700 mb-2 block">Password</span>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full rounded-lg border border-zinc-700/50 bg-zinc-900/50 px-4 py-2.5 text-zinc-100 placeholder-zinc-500 outline-none focus:border-blue-400/50 focus:bg-zinc-900/80 transition-all duration-200"
+                className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-slate-900 placeholder-slate-400 outline-none focus:border-blue-500 focus:bg-blue-50/30 transition-all duration-200"
                 placeholder="••••••••"
                 required
               />
@@ -81,23 +81,23 @@ const LoginPage = () => {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full btn-primary bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-500/20 mt-6"
+              className="w-full btn-primary bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-blue-600/20 mt-6"
             >
               {isLoading ? 'Signing in...' : 'Sign in'}
             </button>
           </form>
 
           {/* Link to Register */}
-          <p className="mt-6 text-center text-sm text-zinc-400">
+          <p className="mt-6 text-center text-sm text-slate-600">
             New here?{' '}
-            <Link to="/register" className="text-blue-400 font-medium hover:text-blue-300 transition-colors">
+            <Link to="/register" className="text-blue-600 font-medium hover:text-blue-700 transition-colors">
               Create an account
             </Link>
           </p>
         </div>
 
         {/* Footer */}
-        <p className="mt-8 text-center text-xs text-zinc-500">
+        <p className="mt-8 text-center text-xs text-slate-500">
           Track Codeforces & LeetCode • Get AI recommendations • Level up your skills
         </p>
       </div>

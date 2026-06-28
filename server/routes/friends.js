@@ -15,7 +15,14 @@ router.get('/leaderboard', authMiddleware, async (req, res) => {
         lcHandle: user.lcHandle || null,
         friendCount: user.friends?.length || 0,
       }))
-      .sort((a, b) => b.friendCount - a.friendCount || a.displayName.localeCompare(b.displayName));
+      // Sort by whether user has active handles (those with CF/LC are ranked higher)
+      // then by friend count, then alphabetically
+      .sort((a, b) => {
+        const aHasHandle = a.cfHandle || a.lcHandle ? 1 : 0;
+        const bHasHandle = b.cfHandle || b.lcHandle ? 1 : 0;
+        if (bHasHandle !== aHasHandle) return bHasHandle - aHasHandle;
+        return b.friendCount - a.friendCount || a.displayName.localeCompare(b.displayName);
+      });
 
     res.json({ leaderboard });
   } catch (error) {
@@ -34,6 +41,10 @@ router.post('/add', authMiddleware, async (req, res) => {
 
     if (!currentUser || !targetUser) return res.status(404).json({ message: 'User not found' });
     if (currentUser._id.equals(targetUser._id)) return res.status(400).json({ message: 'You cannot add yourself' });
+    // Validate that target user has at least one handle set (CF or LC)
+    if (!targetUser.cfHandle && !targetUser.lcHandle) {
+      return res.status(400).json({ message: 'Target user must have a Codeforces or LeetCode handle set' });
+    }
 
     if (!currentUser.friends.includes(targetUser._id)) {
       currentUser.friends.push(targetUser._id);

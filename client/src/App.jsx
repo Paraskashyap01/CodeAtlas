@@ -13,11 +13,11 @@ const ProtectedRoute = ({ children }) => {
   const { user, restoring } = useAuth();
   if (restoring)
     return (
-      <div className="min-h-screen bg-dark-950 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-slate-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-400 mb-4"></div>
-          <p className="text-zinc-300 font-medium">Restoring your session...</p>
-          <p className="text-zinc-500 text-sm mt-2">Just a moment</p>
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mb-4"></div>
+          <p className="text-slate-700 font-medium">Restoring your session...</p>
+          <p className="text-slate-500 text-sm mt-2">Just a moment</p>
         </div>
       </div>
     );

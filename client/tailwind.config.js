@@ -3,28 +3,27 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Refined dark palette
-        'dark': {
-          50: '#f8f9fa',
-          100: '#f1f3f5',
-          200: '#e9ecef',
-          300: '#dee2e6',
-          400: '#ced4da',
-          500: '#adb5bd',
-          600: '#868e96',
-          700: '#495057',
-          800: '#343a40',
-          900: '#212529',
-          950: '#0f1117',
+        // Light modern palette
+        'light': {
+          50: '#fafbfc',
+          100: '#f6f8fa',
+          200: '#eaeef2',
+          300: '#d0d7de',
+          400: '#b1bac4',
+          500: '#8c959f',
+          600: '#6e7681',
+          700: '#57606a',
+          800: '#424a53',
+          900: '#32383f',
         },
-        // Premium accent colors
+        // Premium accent colors for light theme
         'accent': {
-          blue: '#3b82f6',
-          cyan: '#06b6d4',
-          emerald: '#10b981',
-          amber: '#f59e0b',
-          rose: '#f43f5e',
-          violet: '#8b5cf6',
+          blue: '#0969da',
+          cyan: '#0598bc',
+          emerald: '#1a7f64',
+          amber: '#9e6a03',
+          rose: '#d1242f',
+          violet: '#6f42c1',
         },
       },
       fontFamily: {

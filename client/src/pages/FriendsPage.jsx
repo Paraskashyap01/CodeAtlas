@@ -27,13 +27,13 @@ const FriendsPage = () => {
 
   return (
     <AppShell title="Friends" subtitle="Browse a simple community leaderboard and add friends to follow their progress.">
-      <div className="panel animate-fade-in-up">
+      <div className="panel-blue animate-fade-in-up">
         <h2 className="section-title mb-4">🏆 Leaderboard</h2>
-        {message && <p className="mb-4 text-sm text-emerald-300">{message}</p>}
+        {message && <p className="mb-4 text-sm text-emerald-700">{message}</p>}
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="border-b border-zinc-800 text-zinc-400">
+              <tr className="border-b border-slate-200 text-slate-600">
                 <th className="py-3">User</th>
                 <th className="py-3">Friends</th>
                 <th className="py-3" />
@@ -41,11 +41,11 @@ const FriendsPage = () => {
             </thead>
             <tbody>
               {leaderboard.map((entry) => (
-                <tr key={entry.id} className="border-b border-zinc-900/80 text-zinc-300">
+                <tr key={entry.id} className="border-b border-slate-100 text-slate-700">
                   <td className="py-3">{entry.displayName}</td>
                   <td className="py-3">{entry.friendCount}</td>
                   <td className="py-3 text-right">
-                    <button onClick={() => addFriend(entry.id)} className="rounded-lg border border-zinc-700 px-3 py-1.5 text-sm hover:bg-zinc-800">
+                    <button onClick={() => addFriend(entry.id)} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50">
                       Add friend
                     </button>
                   </td>

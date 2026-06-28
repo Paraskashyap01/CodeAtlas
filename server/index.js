@@ -31,7 +31,6 @@ startReminderJob();
 
 app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
-app.use(['/api/cf', '/api/lc'], apiLimiter);
 app.use('/api/cf', cfRoutes);
 app.use('/api/lc', lcRoutes);
 app.use('/api/notes', notesRoutes);

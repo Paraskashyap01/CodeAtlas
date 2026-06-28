@@ -17,10 +17,16 @@ const syncGoalProgress = async (userId, goal) => {
   const cache = await CachedCFData.findOne({ userId });
   if (!cache?.submissions?.length) return goal;
 
+  // NOTE: Week boundaries use UTC. If a user is in UTC+5:30 (IST) and submits on Monday 00:30 IST,
+  // it will be counted as Sunday 19:00 UTC (previous day). This is intentional for consistency.
+  // For a more user-friendly experience, consider storing user timezone preference.
   const weekStart = goal.weekStart ? new Date(goal.weekStart) : getWeekStart();
   const weekEnd = new Date(weekStart);
   weekEnd.setDate(weekStart.getDate() + 7);
 
+  // NOTE: Goal progress is synced from Codeforces submissions only.
+  // LeetCode submissions are not counted. This may be updated in a future version
+  // to include LeetCode stats for a more comprehensive tracking experience.
   const acceptedThisWeek = (cache.submissions || []).filter((submission) => {
     if (submission.verdict !== 'OK') return false;
     const createdAt = submission.creationTimeSeconds ? new Date(submission.creationTimeSeconds * 1000) : null;
