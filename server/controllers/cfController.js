@@ -23,11 +23,21 @@ export const getCFStats = async (req, res) => {
       });
     }
 
-    const cfData = await fetchCFData(user.cfHandle);
+    let cfData = await fetchCFData(user.cfHandle);
+
+    const currentRating =
+      cfData.ratingHistory.length > 0
+        ? cfData.ratingHistory[cfData.ratingHistory.length - 1].newRating
+        : null;
+
+    const derived = buildCFDerivedStats(cfData.submissions);
+
     const update = {
       handle: user.cfHandle,
       ratingHistory: cfData.ratingHistory,
       submissions: cfData.submissions,
+      currentRating,
+      solvedCount: derived.solvedCount,
       fetchedAt: cfData.fetchedAt,
     };
 
@@ -37,8 +47,6 @@ export const getCFStats = async (req, res) => {
     } else {
       cache = await CachedCFData.create({ userId: req.userId, ...update });
     }
-
-    const derived = buildCFDerivedStats(cache.submissions);
 
     res.json({
       success: true,
