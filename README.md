@@ -69,9 +69,9 @@ Then visit `http://localhost:5173` and:
 - **Daily Caching:** Recommendations are generated and cached once per user per day to prevent API quota strain.
 
 ### 🎯 Goal Tracking & Streaks
-- **Weekly Objectives:** Set custom weekly goals (e.g., "Solve 5 DP problems") and adjust progress dynamically.
-- **轻量 Progress Bar:** Visual completion indicators.
-- **Streak & Reminders:** Integrates with `node-cron` to schedule automated daily nudge emails via `Nodemailer` to keep your practice streak alive.
+- **Weekly Objectives:** Set custom weekly goals (e.g., "Solve 5 DP problems") and track progress dynamically.
+- **Lightweight Progress Bar:** Visual completion indicators.
+- **Streak & Reminders:** Integrates with `node-cron` and `Nodemailer` for optional daily nudge emails.
 
 ### 📝 Personal Problem Notes
 - Keep lightweight notes on challenging problems.
