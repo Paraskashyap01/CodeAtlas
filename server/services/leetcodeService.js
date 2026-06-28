@@ -53,8 +53,16 @@ export const fetchLCSkills = (handle) =>
     fallback: { fundamental: [], intermediate: [], advanced: [] },
   });
 
-export const fetchLCDaily = () =>
-  safeGet('/daily', { optional: true, fallback: null });
+export const fetchLCDaily = async () => {
+  const data = await safeGet('/daily', { optional: true, fallback: null });
+  if (!data) return null;
+  return {
+    ...data,
+    question: data.question
+      ? { ...data.question, problemUrl: data.link ? `https://leetcode.com${data.link}` : null }
+      : null,
+  };
+};
 
 // Calendar comes back as { submissionCalendar: { "<unixSeconds>": count, ... }, streak, totalActiveDays, activeYears }
 // Normalize it to [{ date: 'YYYY-MM-DD', count }] to match the shape the
@@ -131,7 +139,10 @@ export const fetchLCFullProfile = async (handle) => {
     totalBreakdown,
     contestRanking: contests?.userContestRanking ?? null,
     contestHistory: contests?.userContestRankingHistory ?? [],
-    submissions: submissions ?? [],
+    submissions: (submissions ?? []).map((s) => ({
+      ...s,
+      problemUrl: s.titleSlug ? `https://leetcode.com/problems/${s.titleSlug}/` : null,
+    })),
     badges: badges?.badges ?? [],
     upcomingBadges: badges?.upcomingBadges ?? [],
     skills: skills ?? { fundamental: [], intermediate: [], advanced: [] },

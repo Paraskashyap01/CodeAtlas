@@ -2,6 +2,34 @@ import { useEffect, useState } from 'react';
 import AppShell from '../components/AppShell.jsx';
 import { createNote, getNotes } from '../api/notes.js';
 
+// Notes store a free-text problemId (e.g. "1791-C" for Codeforces or
+// "two-sum" for LeetCode). Build a best-effort link from that + platform so
+// notes are clickable too, without needing a backend schema change.
+const buildNoteProblemUrl = (problemId, platform) => {
+  if (!problemId) return null;
+  const trimmed = problemId.trim();
+
+  if (platform === 'codeforces') {
+    // Accepts "1791-C", "1791C", or "1791 C"
+    const match = trimmed.match(/^(\d+)[\s-]?([A-Za-z]\d*)$/);
+    if (match) {
+      return `https://codeforces.com/problemset/problem/${match[1]}/${match[2].toUpperCase()}`;
+    }
+    return null;
+  }
+
+  if (platform === 'leetcode') {
+    // Accepts a slug directly ("two-sum") - turn anything else into a slug guess
+    const slug = trimmed
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+    return slug ? `https://leetcode.com/problems/${slug}/` : null;
+  }
+
+  return null;
+};
+
 const NotesPage = () => {
   const [notes, setNotes] = useState([]);
   const [form, setForm] = useState({ problemId: '', platform: 'codeforces', note: '', revisit: false });
@@ -101,27 +129,41 @@ const NotesPage = () => {
           <h2 className="section-title mb-5">📚 Saved Notes</h2>
           <div className="space-y-3">
             {notes.length ? (
-              notes.map((note, idx) => (
-                <article
-                  key={note._id}
-                  className="rounded-lg border border-slate-200 bg-slate-50 p-4 hover:border-slate-300 hover:bg-slate-100 transition-all duration-200"
-                  style={{ animationDelay: `${0.05 * idx}s` }}
-                >
-                  <div className="flex flex-wrap items-center gap-2 mb-3">
-                    <h3 className="font-semibold text-slate-900">{note.problemId}</h3>
-                    <span className="badge-primary text-xs">{note.platform}</span>
-                    {note.revisit && (
-                      <span className="badge text-xs bg-amber-100 text-amber-700">
-                        🔖 Revisit
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-sm text-slate-700 leading-relaxed">{note.note}</p>
-                  <p className="mt-3 text-xs text-slate-500">
-                    {new Date(note.createdAt).toLocaleDateString()}
-                  </p>
-                </article>
-              ))
+              notes.map((note, idx) => {
+                const problemUrl = buildNoteProblemUrl(note.problemId, note.platform);
+                return (
+                  <article
+                    key={note._id}
+                    className="rounded-lg border border-slate-200 bg-slate-50 p-4 hover:border-slate-300 hover:bg-slate-100 transition-all duration-200"
+                    style={{ animationDelay: `${0.05 * idx}s` }}
+                  >
+                    <div className="flex flex-wrap items-center gap-2 mb-3">
+                      {problemUrl ? (
+                        <a
+                          href={problemUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-semibold text-blue-700 hover:text-blue-900 hover:underline"
+                        >
+                          {note.problemId}
+                        </a>
+                      ) : (
+                        <h3 className="font-semibold text-slate-900">{note.problemId}</h3>
+                      )}
+                      <span className="badge-primary text-xs">{note.platform}</span>
+                      {note.revisit && (
+                        <span className="badge text-xs bg-amber-100 text-amber-700">
+                          🔖 Revisit
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-sm text-slate-700 leading-relaxed">{note.note}</p>
+                    <p className="mt-3 text-xs text-slate-500">
+                      {new Date(note.createdAt).toLocaleDateString()}
+                    </p>
+                  </article>
+                );
+              })
             ) : (
               <div className="text-center py-12">
                 <p className="text-slate-600 mb-2">No notes yet.</p>
