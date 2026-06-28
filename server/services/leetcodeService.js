@@ -71,8 +71,9 @@ export const fetchLCData = async (handle) => {
 
 export const fetchLCCalendar = async (handle) => {
   try {
-    // Fetch calendar from alfa-leetcode-api which provides per-day submission counts
-    const response = await axios.get(`https://alfa-leetcode-api.onrender.com/${handle}/calendar`, {
+    // Primary source: noworneverev/leetcode-api (more reliable, actively maintained)
+    // API: https://github.com/noworneverev/leetcode-api
+    const response = await axios.get(`https://leetcode-api-faisalshohag.vercel.app/${handle}/calendar`, {
       timeout: 10000,
     });
 
@@ -81,16 +82,36 @@ export const fetchLCCalendar = async (handle) => {
     }
 
     // Transform calendar data to match our format: [{ date, count }]
+    // The API returns calendar as object with timestamps as keys and submission counts as values
     const calendarData = Object.entries(response.data.calendar).map(([timestamp, count]) => ({
       date: new Date(parseInt(timestamp) * 1000).toISOString().split('T')[0],
-      count: count,
+      count: parseInt(count) || 0,
     }));
 
     return calendarData;
-  } catch (error) {
-    // Calendar fetch is optional - don't throw, just return empty array
-    console.warn(`Unable to fetch LeetCode calendar for ${handle}:`, error.message);
-    return [];
+  } catch (primaryError) {
+    // Fallback: try alfa-leetcode-api if primary source fails
+    try {
+      console.warn(`Primary LeetCode API failed for ${handle}, trying fallback...`);
+      const response = await axios.get(`https://alfa-leetcode-api.onrender.com/${handle}/calendar`, {
+        timeout: 10000,
+      });
+
+      if (!response.data?.calendar) {
+        return [];
+      }
+
+      const calendarData = Object.entries(response.data.calendar).map(([timestamp, count]) => ({
+        date: new Date(parseInt(timestamp) * 1000).toISOString().split('T')[0],
+        count: parseInt(count) || 0,
+      }));
+
+      return calendarData;
+    } catch (fallbackError) {
+      // Calendar fetch is optional - don't throw, just return empty array
+      console.warn(`Unable to fetch LeetCode calendar for ${handle} (both primary and fallback failed)`);
+      return [];
+    }
   }
 };
 
