@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import LoginPage from './pages/LoginPage.jsx';
 import RegisterPage from './pages/RegisterPage.jsx';
 import DashboardPage from './pages/DashboardPage.jsx';
+import SettingsPage from './pages/SettingsPage.jsx';
 import RecommendationsPage from './pages/RecommendationsPage.jsx';
 import NotesPage from './pages/NotesPage.jsx';
 import GoalsPage from './pages/GoalsPage.jsx';
@@ -32,6 +33,7 @@ function App() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+      <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
       <Route path="/leetcode" element={<ProtectedRoute><LeetCodePage /></ProtectedRoute>} />
       <Route path="/codeforces" element={<ProtectedRoute><CodeforcesPage /></ProtectedRoute>} />
       <Route path="/recommendations" element={<ProtectedRoute><RecommendationsPage /></ProtectedRoute>} />
