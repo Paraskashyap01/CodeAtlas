@@ -137,3 +137,8 @@ To respect Codeforces and LeetCode API limits, profile stats are stored in the d
 - API calls check for cached documents.
 - If the cache is **fresh** (fetched less than 30 minutes ago), the cached data is returned immediately.
 - Otherwise, a new request is made to the platform, and the database cache is updated.
+
+---
+
+## 📄 License
+This project is licensed under the MIT License.
