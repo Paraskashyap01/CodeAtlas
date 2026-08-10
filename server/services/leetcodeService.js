@@ -50,7 +50,7 @@ export const fetchLCBadges = (handle) =>
 export const fetchLCSkills = (handle) =>
   safeGet(`/user/${encodeURIComponent(handle)}/skills`, {
     optional: true,
-    fallback: { fundamental: [], intermediate: [], advanced: [] },
+    fallback: {fundamental:[],intermediate:[],advanced:[]},
   });
 
 export const fetchLCDaily = async () => {

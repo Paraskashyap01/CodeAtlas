@@ -86,6 +86,7 @@ export const buildCFDerivedStats = (submissions = []) => {
     }))
     .sort((a, b) => b.attempts - a.attempts || a.tag.localeCompare(b.tag));
 
+    
   const weakTopics = topicStats
     .filter((topic) => topic.attempts >= weakTopicMinAttempts())
     .sort((a, b) => a.accuracy - b.accuracy || b.attempts - a.attempts)

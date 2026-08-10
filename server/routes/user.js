@@ -8,4 +8,5 @@ const router = express.Router();
 router.get('/profile', authMiddleware, getProfile);
 router.put('/handles', authMiddleware, updateHandles);
 
+
 export default router;

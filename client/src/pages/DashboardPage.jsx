@@ -33,7 +33,8 @@ const DashboardPage = () => {
   const lcCounts = useMemo(() => {
     const ac = lcData?.stats?.submitStats?.acSubmissionNum;
     if (!ac) return null;
-    
+
+  
     // Handle both array and string cases
     if (Array.isArray(ac)) {
       return {
@@ -42,7 +43,7 @@ const DashboardPage = () => {
         hard: ac.find((x) => x.difficulty === 'Hard')?.count ?? 0,
       };
     }
-    
+
     // If ac is a string, it might be empty or malformed
     return null;
   }, [lcData]);
@@ -54,45 +55,51 @@ const DashboardPage = () => {
   }, [cfData]);
 
   // Calculate current streak from merged calendar
+  // changed this func !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   const currentStreak = useMemo(() => {
-    const today = new Date();
-    const calendar = [];
-    
-    // Merge CF and LC calendar data
     const counts = new Map();
+
     const addEntries = (items = []) => {
-      for (const item of items || []) {
+      for (const item of items) {
         if (!item?.date) continue;
-        counts.set(item.date, (counts.get(item.date) || 0) + (item.count || 1));
+
+        counts.set(
+          item.date,
+          (counts.get(item.date) || 0) + (item.count || 1)
+        );
       }
     };
 
     addEntries(cfData?.calendar);
     addEntries(lcData?.calendar);
 
-    const sortedDates = [...counts.entries()]
-      .map(([date]) => new Date(date))
-      .sort((a, b) => b.getTime() - a.getTime());
+    // No activity
+    if (counts.size === 0) return 0;
 
-    if (sortedDates.length === 0) return 0;
+    // Store all active days in a Set for O(1) lookup
+    const activeDays = new Set(
+      [...counts.keys()].map((date) => {
+        const d = new Date(date);
+        d.setHours(0, 0, 0, 0);
+        return d.getTime();
+      })
+    );
+
+    let current = new Date();
+    current.setHours(0, 0, 0, 0);
+
+    // If there is no activity today but there is yesterday,
+    // start counting from yesterday.
+    if (!activeDays.has(current.getTime())) {
+      current.setDate(current.getDate() - 1);
+    }
 
     let streak = 0;
-    let currentDate = new Date(today);
-    currentDate.setHours(0, 0, 0, 0);
 
-    for (const dateEntry of sortedDates) {
-      const entryDate = new Date(dateEntry);
-      entryDate.setHours(0, 0, 0, 0);
-
-      const diffTime = currentDate.getTime() - entryDate.getTime();
-      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-
-      if (diffDays === streak) {
-        streak++;
-        currentDate.setDate(currentDate.getDate() - 1);
-      } else if (diffDays > streak) {
-        break;
-      }
+    while (activeDays.has(current.getTime())) {
+      streak++;
+      current.setDate(current.getDate() - 1);
     }
 
     return streak;
@@ -105,7 +112,7 @@ const DashboardPage = () => {
   const mergedCalendar = useMemo(() => {
     const counts = new Map();
     const addEntries = (items = []) => {
-      for (const item of items || []) {
+      for (const item of items ) {
         if (!item?.date) continue;
         counts.set(item.date, (counts.get(item.date) || 0) + (item.count || 1));
       }
@@ -235,13 +242,12 @@ const StatCard = ({ label, value, icon, accentColor, colorClass = 'stat-card' })
   <div className={`${colorClass} p-6 hover:shadow-md transition-all duration-300 group`}>
     <div className="flex items-start justify-between">
       <div className="flex-1">
-        <p className={`text-xs font-semibold uppercase tracking-widest group-hover:opacity-80 transition-colors ${
-          colorClass.includes('emerald') ? 'text-emerald-700' :
+        <p className={`text-xs font-semibold uppercase tracking-widest group-hover:opacity-80 transition-colors ${colorClass.includes('emerald') ? 'text-emerald-700' :
           colorClass.includes('blue') ? 'text-blue-700' :
-          colorClass.includes('amber') ? 'text-amber-700' :
-          colorClass.includes('rose') ? 'text-rose-700' :
-          'text-slate-600'
-        }`}>
+            colorClass.includes('amber') ? 'text-amber-700' :
+              colorClass.includes('rose') ? 'text-rose-700' :
+                'text-slate-600'
+          }`}>
           {label}
         </p>
         <p className={`mt-3 text-3xl font-bold ${accentColor}`}>{value}</p>
