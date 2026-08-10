@@ -1,7 +1,6 @@
-import CachedCFData from '../models/CachedCFData.js';
 import CachedLCData from '../models/CachedLCData.js';
 import User from '../models/user.js';
-import { buildCFDerivedStats } from '../utils/cfStats.js';
+import { getCFDataForUser } from '../services/codeforcesService.js';
 import { apiError } from '../utils/validation.js';
 
 export const getPublicProfile = async (req, res) => {
@@ -13,12 +12,10 @@ export const getPublicProfile = async (req, res) => {
 
     if (!user) return apiError(res, 404, 'Profile not found');
 
-    const [cfCache, lcCache] = await Promise.all([
-      CachedCFData.findOne({ userId: user._id }),
+    const [cfData, lcCache] = await Promise.all([
+      user.cfHandle ? getCFDataForUser(user._id, user.cfHandle) : null,
       CachedLCData.findOne({ userId: user._id }),
     ]);
-
-    const cfStats = cfCache ? buildCFDerivedStats(cfCache.submissions) : null;
 
     res.json({
       success: true,
@@ -29,8 +26,8 @@ export const getPublicProfile = async (req, res) => {
         lcHandle: user.lcHandle,
         joinedAt: user.createdAt,
       },
-      codeforces: cfCache
-        ? { handle: cfCache.handle, fetchedAt: cfCache.fetchedAt, ratingHistory: cfCache.ratingHistory, ...cfStats }
+      codeforces: cfData
+        ? { handle: cfData.handle, fetchedAt: cfData.fetchedAt, ratingHistory: cfData.ratingHistory, currentRating: cfData.currentRating, solvedCount: cfData.solvedCount, difficultyDistribution: cfData.difficultyDistribution, topicStats: cfData.topicStats, weakTopics: cfData.weakTopics, calendar: cfData.calendar, recentSubmissions: cfData.recentSubmissions }
         : null,
       leetcode: lcCache ? { handle: lcCache.handle, stats: lcCache.stats, fetchedAt: lcCache.fetchedAt } : null,
     });

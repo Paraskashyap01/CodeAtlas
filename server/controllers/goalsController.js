@@ -1,8 +1,8 @@
 import { validationResult } from 'express-validator';
 import Goal from '../models/Goal.js';
-import CachedCFData from '../models/CachedCFData.js';
 import CachedLCData from '../models/CachedLCData.js';
-import { buildCFDerivedStats } from '../utils/cfStats.js';
+import User from '../models/user.js';
+import { getCFDataForUser } from '../services/codeforcesService.js';
 import { apiError } from '../utils/validation.js';
 
 const getWeekStart = (date = new Date()) => {
@@ -16,7 +16,11 @@ const getWeekStart = (date = new Date()) => {
 
 const syncGoalProgress = async (userId, goal) => {
   if (!goal) return null;
-  const cfCache = await CachedCFData.findOne({ userId });
+  const user = await User.findById(userId);
+  if (!user?.cfHandle) {
+    return goal;
+  }
+  const cfData = await getCFDataForUser(userId, user.cfHandle);
   const lcCache = await CachedLCData.findOne({ userId });
 
   // NOTE: Week boundaries use UTC. If a user is in UTC+5:30 (IST) and submits on Monday 00:30 IST,
@@ -28,8 +32,8 @@ const syncGoalProgress = async (userId, goal) => {
 
   // Count Codeforces accepted submissions this week
   let cfSolvedCount = 0;
-  if (cfCache?.submissions?.length) {
-    const acceptedThisWeek = (cfCache.submissions || []).filter((submission) => {
+  if (cfData?.submissions?.length) {
+    const acceptedThisWeek = (cfData.submissions || []).filter((submission) => {
       if (submission.verdict !== 'OK') return false;
       const createdAt = submission.creationTimeSeconds ? new Date(submission.creationTimeSeconds * 1000) : null;
       if (!createdAt) return false;

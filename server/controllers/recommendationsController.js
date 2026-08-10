@@ -1,9 +1,7 @@
-import CachedCFData from '../models/CachedCFData.js';
 import RecommendationCache from '../models/RecommendationCache.js';
 import User from '../models/user.js';
-import { fetchCFData } from '../services/codeforcesService.js';
+import { getCFDataForAuthenticatedUser } from '../services/codeforcesService.js';
 import { generateRecommendations } from '../services/recommendationService.js';
-import { buildCFDerivedStats } from '../utils/cfStats.js';
 import { apiError } from '../utils/validation.js';
 
 const todayKey = () => new Date().toISOString().slice(0, 10);
@@ -23,28 +21,12 @@ export const getRecommendations = async (req, res) => {
       return res.json(existing);
     }
 
-    let cfCache = await CachedCFData.findOne({ userId: req.userId });
-    if (!cfCache || cfCache.handle !== user.cfHandle) {
-      const cfData = await fetchCFData(user.cfHandle);
-      cfCache = await CachedCFData.findOneAndUpdate(
-        { userId: req.userId },
-        {
-          userId: req.userId,
-          handle: user.cfHandle,
-          ratingHistory: cfData.ratingHistory,
-          submissions: cfData.submissions,
-          fetchedAt: cfData.fetchedAt,
-        },
-        { new: true, upsert: true }
-      );
-    }
-
-    const derived = buildCFDerivedStats(cfCache.submissions);
-    const ai = await generateRecommendations(derived.weakTopics);
+    const cfData = await getCFDataForAuthenticatedUser(req.userId);
+    const ai = await generateRecommendations(cfData.weakTopics);
     const saved = await RecommendationCache.create({
       userId: req.userId,
       cacheDate,
-      weakTopics: derived.weakTopics,
+      weakTopics: cfData.weakTopics,
       recommendations: ai.recommendations,
       generatedBy: ai.generatedBy,
     });

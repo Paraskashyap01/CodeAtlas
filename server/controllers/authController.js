@@ -4,6 +4,8 @@ import jwt from 'jsonwebtoken';
 import User from '../models/user.js';
 import { apiError } from '../utils/validation.js';
 
+export const normalizeEmail = (email) => String(email || '').trim().toLowerCase();
+
 const generateToken = (userId) => {
     const secret = process.env.JWT_SECRET;
     if (!secret) {
@@ -19,7 +21,7 @@ export const register = async (req, res) => {
     }
 
     const { email, password } = req.body;
-    const normalizedEmail = String(email).trim().toLowerCase();
+    const normalizedEmail = normalizeEmail(email);
 
     try {
         const existing = await User.findOne({ email: normalizedEmail });
@@ -47,9 +49,10 @@ export const login = async (req, res) => {
     }
 
     const { email, password } = req.body;
+    const normalizedEmail = normalizeEmail(email);
 
     try {
-        const user = await User.findOne({ email });
+        const user = await User.findOne({ email: normalizedEmail });
         if (!user) {
             return apiError(res, 401, 'Invalid credentials');
         }

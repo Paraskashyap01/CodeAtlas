@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import './config/env.js';
 import connectDB from './utils/db.js';
 import authRoutes from './routes/auth.js';
 import userRoutes from './routes/user.js';
@@ -18,7 +19,7 @@ import { connectRedis } from './config/redis.js';
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const requestedPort = Number(process.env.PORT || 5000);
 
 const allowedOrigin = process.env.ALLOWED_ORIGIN;
 app.use(cors({
@@ -27,12 +28,14 @@ app.use(cors({
 }));
 app.use(express.json());
 
-connectDB();
-connectRedis().catch((error) => {
-  console.error('Redis startup failed:', error.message);
-});
-startReminderJob();
+const startServer = async () => {
+  await connectDB();
+  await connectRedis().catch((error) => {
+    console.error('Redis startup failed:', error.message);
+  });
+  startReminderJob();
 
+  app.use(['/api/cf', '/api/lc'], apiLimiter);
 app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/cf', cfRoutes);
@@ -42,7 +45,6 @@ app.use('/api/goals', goalsRoutes);
 app.use('/api/recommendations', recommendationsRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/friends', friendsRoutes);
-app.use(['/api/cf', '/api/lc'], apiLimiter);
 
 app.get('/api/ping', (req, res) => {
   res.json({ message: 'CP Growth Tracker API is alive' });
@@ -53,7 +55,23 @@ app.use((err, req, res, next) => {
   res.status(500).json({ message: 'Server error', error: err.message });
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-});
+  const listenOnPort = (port) => {
+    app.listen(port, () => {
+      console.log(`Server running on http://localhost:${port}`);
+    }).on('error', (error) => {
+      if (error.code === 'EADDRINUSE') {
+        console.warn(`Port ${port} is busy, trying ${port + 1}...`);
+        listenOnPort(port + 1);
+        return;
+      }
+
+      console.error('Server startup failed:', error.message);
+      process.exit(1);
+    });
+  };
+
+  listenOnPort(requestedPort);
+};
+
+startServer();
 

@@ -1,7 +1,7 @@
 import express from 'express';
 import User from '../models/user.js';
-import CachedCFData from '../models/CachedCFData.js';
 import authMiddleware from '../middleware/auth.js';
+import { getCFDataForUser } from '../services/codeforcesService.js';
 import { isValidObjectId, apiError } from '../utils/validation.js';
 
 const router = express.Router();
@@ -13,64 +13,20 @@ router.get('/leaderboard', authMiddleware, async (req, res) => {
     const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 20));
     const skip = (page - 1) * limit;
 
-    // Use aggregation to join User with CachedCFData for real CP stats
-    const totalResult = await User.aggregate([
-      {
-        $lookup: {
-          from: 'cachedcfdatas',
-          localField: '_id',
-          foreignField: 'userId',
-          as: 'cfData',
-        },
-      },
-      {
-        $project: {
-          email: 1,
-          cfHandle: 1,
-          lcHandle: 1,
-          friends: 1,
-          // Extract CF stats from the joined data
-          cfRating: { $arrayElemAt: ['$cfData.currentRating', 0] },
-          cfSolvedCount: { $arrayElemAt: ['$cfData.solvedCount', 0] },
-        },
-      },
-      { $sort: { cfHandle: -1, cfRating: -1, cfSolvedCount: -1, email: 1 } },
-      { $count: 'total' },
-    ]);
-    const total = totalResult[0]?.total || 0;
+    const users = await User.find({}).select('email cfHandle lcHandle friends').sort({ cfHandle: -1, email: 1 }).skip(skip).limit(limit);
+    const total = await User.countDocuments();
 
-    const leaderboard = await User.aggregate([
-      {
-        $lookup: {
-          from: 'cachedcfdatas',
-          localField: '_id',
-          foreignField: 'userId',
-          as: 'cfData',
-        },
-      },
-      {
-        $project: {
-          email: 1,
-          cfHandle: 1,
-          lcHandle: 1,
-          friends: 1,
-          cfRating: { $arrayElemAt: ['$cfData.currentRating', 0] },
-          cfSolvedCount: { $arrayElemAt: ['$cfData.solvedCount', 0] },
-        },
-      },
-      { $sort: { cfHandle: -1, cfRating: -1, cfSolvedCount: -1, email: 1 } },
-      { $skip: skip },
-      { $limit: limit },
-    ]);
-
-    const leaderboardData = leaderboard.map((user) => ({
-      id: user._id,
-      displayName: user.cfHandle || user.lcHandle || user.email,
-      cfHandle: user.cfHandle || null,
-      lcHandle: user.lcHandle || null,
-      cfRating: user.cfRating || null,
-      cfSolvedCount: user.cfSolvedCount || null,
-      friendCount: user.friends?.length || 0,
+    const leaderboardData = await Promise.all(users.map(async (user) => {
+      const cfData = user.cfHandle ? await getCFDataForUser(user._id, user.cfHandle) : null;
+      return {
+        id: user._id,
+        displayName: user.cfHandle || user.lcHandle || user.email,
+        cfHandle: user.cfHandle || null,
+        lcHandle: user.lcHandle || null,
+        cfRating: cfData?.currentRating ?? null,
+        cfSolvedCount: cfData?.solvedCount ?? null,
+        friendCount: user.friends?.length || 0,
+      };
     }));
 
     res.json({ success: true, leaderboard: leaderboardData, pagination: { page, limit, total, pages: Math.ceil(total / limit) } });
