@@ -13,6 +13,7 @@ import profileRoutes from './routes/profile.js';
 import friendsRoutes from './routes/friends.js';
 import { startReminderJob } from './services/reminderService.js';
 import { apiLimiter } from './middleware/rateLimiter.js';
+import { connectRedis } from './config/redis.js';
 
 dotenv.config();
 
@@ -27,6 +28,9 @@ app.use(cors({
 app.use(express.json());
 
 connectDB();
+connectRedis().catch((error) => {
+  console.error('Redis startup failed:', error.message);
+});
 startReminderJob();
 
 app.use('/api/auth', authRoutes);

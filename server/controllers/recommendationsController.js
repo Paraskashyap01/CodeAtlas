@@ -1,7 +1,7 @@
 import CachedCFData from '../models/CachedCFData.js';
 import RecommendationCache from '../models/RecommendationCache.js';
 import User from '../models/user.js';
-import { fetchCFData, isCacheFresh } from '../services/codeforcesService.js';
+import { fetchCFData } from '../services/codeforcesService.js';
 import { generateRecommendations } from '../services/recommendationService.js';
 import { buildCFDerivedStats } from '../utils/cfStats.js';
 import { apiError } from '../utils/validation.js';
@@ -24,7 +24,7 @@ export const getRecommendations = async (req, res) => {
     }
 
     let cfCache = await CachedCFData.findOne({ userId: req.userId });
-    if (!cfCache || !isCacheFresh(cfCache.fetchedAt) || cfCache.handle !== user.cfHandle) {
+    if (!cfCache || cfCache.handle !== user.cfHandle) {
       const cfData = await fetchCFData(user.cfHandle);
       cfCache = await CachedCFData.findOneAndUpdate(
         { userId: req.userId },

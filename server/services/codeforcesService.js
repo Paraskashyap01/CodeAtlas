@@ -1,7 +1,6 @@
 import axios from 'axios';
 
 const CF_BASE = 'https://codeforces.com/api';
-const CACHE_TTL_MS = 30 * 60 * 1000;
 
 export const fetchCFData = async (handle) => {
   const [userInfoResponse, ratingResponse, submissionsResponse] = await Promise.all([
@@ -23,9 +22,5 @@ export const fetchCFData = async (handle) => {
   };
 };
 
-export const isCacheFresh = (fetchedAt) => {
-  if (!fetchedAt) return false;
-  return Date.now() - new Date(fetchedAt).getTime() < CACHE_TTL_MS;
-};
 
 

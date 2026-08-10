@@ -2,7 +2,7 @@ import cron from 'node-cron';
 import nodemailer from 'nodemailer';
 import User from '../models/user.js';
 
-const shouldEnableEmail = () => process.env.EMAIL_USER && process.env.EMAIL_PASS;
+const shouldEnableEmail = () => Boolean(process.env.EMAIL_USER && process.env.EMAIL_PASS);
 
 const createTransporter = () =>
   nodemailer.createTransport({
@@ -28,6 +28,11 @@ export const startReminderJob = () => {
         email: { $exists: true, $ne: '' },
         emailReminders: { $ne: false },
       }).select('email cfHandle lcHandle');
+
+      if (!users.length) {
+        return;
+      }
+
       await Promise.all(
         users.map((user) =>
           transporter.sendMail({
@@ -40,7 +45,7 @@ export const startReminderJob = () => {
       );
       console.log(`Sent ${users.length} daily reminder email(s).`);
     } catch (error) {
-      console.error('Unable to send daily reminder emails', error);
+      console.warn('Reminder email job skipped due to mail configuration error:', error.message);
     }
   });
 };

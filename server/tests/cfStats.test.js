@@ -16,3 +16,5 @@ test('weak topics use the configured minimum attempt threshold', () => {
   assert.equal(stats.weakTopics.length, 1);
   assert.equal(stats.weakTopics[0].tag, 'dp');
 });
+
+
