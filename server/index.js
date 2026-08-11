@@ -22,10 +22,12 @@ const app = express();
 const requestedPort = Number(process.env.PORT || 5000);
 
 const allowedOrigin = process.env.ALLOWED_ORIGIN;
+
 app.use(cors({
   origin: allowedOrigin ? allowedOrigin.split(',').map((value) => value.trim()) : true,
   credentials: true,
 }));
+
 app.use(express.json());
 
 const startServer = async () => {
@@ -35,7 +37,7 @@ const startServer = async () => {
   });
   startReminderJob();
 
-  app.use(['/api/cf', '/api/lc'], apiLimiter);
+app.use(['/api/cf', '/api/lc'], apiLimiter);
 app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/cf', cfRoutes);
@@ -64,12 +66,10 @@ app.use((err, req, res, next) => {
         listenOnPort(port + 1);
         return;
       }
-
       console.error('Server startup failed:', error.message);
       process.exit(1);
     });
   };
-
   listenOnPort(requestedPort);
 };
 

@@ -6,6 +6,7 @@ import { apiError } from '../utils/validation.js';
 // Fetches fresh data from the LeetCode API and upserts the cache document.
 // Shared by both getLCStats (legacy/dashboard) and getLCProfile (new page)
 // so there is only ever one cache write path.
+
 const refreshCache = async (userId, handle, existingCache) => {
   const fresh = await fetchLCFullProfile(handle);
 
@@ -57,6 +58,7 @@ const refreshCache = async (userId, handle, existingCache) => {
   return CachedLCData.create({ userId, ...update });
 };
 
+
 const getCacheOrRefresh = async (req) => {
   const user = await User.findById(req.userId);
   if (!user || !user.lcHandle) {
@@ -70,7 +72,11 @@ const getCacheOrRefresh = async (req) => {
 
   cache = await refreshCache(req.userId, user.lcHandle, cache);
   return { cache };
+
+
 };
+
+
 
 // Legacy endpoint - powers the small stat cards on the main Dashboard.
 // Response shape is unchanged so nothing there breaks.
@@ -97,7 +103,6 @@ export const getLCProfile = async (req, res) => {
   try {
     const { cache, error } = await getCacheOrRefresh(req);
     if (error) return apiError(res, 400, error);
-
     res.json({
       success: true,
       handle: cache.handle,

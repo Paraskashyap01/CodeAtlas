@@ -93,6 +93,7 @@ export const createGoal = async (req, res) => {
   }
 };
 
+
 export const getCurrentGoal = async (req, res) => {
   try {
     const weekStart = getWeekStart();
@@ -105,6 +106,7 @@ export const getCurrentGoal = async (req, res) => {
     res.status(500).json({ success: false, message: 'Unable to fetch goal' });
   }
 };
+
 
 export const updateGoalProgress = async (req, res) => {
   try {
@@ -124,4 +126,6 @@ export const updateGoalProgress = async (req, res) => {
     console.error(error);
     res.status(500).json({ message: 'Unable to update goal' });
   }
+
+
 };

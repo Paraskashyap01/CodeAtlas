@@ -43,6 +43,8 @@ export const updateHandles = async (req, res) => {
         return apiError(res, 409, 'That Codeforces handle is already linked to another account.');
       }
     }
+
+    
     if (trimmedLc && !user.lcHandle) {
       const taken = await User.findOne({ lcHandle: trimmedLc, _id: { $ne: user._id } });
       if (taken) {
