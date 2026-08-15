@@ -26,6 +26,7 @@ export const fetchCFData = async (handle) => {
   };
 };
 
+
 const getCacheKey = (userId) => `cf:user:${String(userId)}`;
 
 export const getCachedCFDataForUser = async (userId) => {

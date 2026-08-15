@@ -13,3 +13,8 @@ recommendationCacheSchema.index({ userId: 1, cacheDate: 1 }, { unique: true });
 
 const RecommendationCache = mongoose.model('RecommendationCache', recommendationCacheSchema);
 export default RecommendationCache;
+
+
+
+
+

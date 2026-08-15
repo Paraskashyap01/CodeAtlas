@@ -12,7 +12,6 @@ import goalsRoutes from './routes/goals.js';
 import recommendationsRoutes from './routes/recommendations.js';
 import profileRoutes from './routes/profile.js';
 import friendsRoutes from './routes/friends.js';
-import { startReminderJob } from './services/reminderService.js';
 import { apiLimiter } from './middleware/rateLimiter.js';
 import { connectRedis } from './config/redis.js';
 
@@ -35,9 +34,8 @@ const startServer = async () => {
   await connectRedis().catch((error) => {
     console.error('Redis startup failed:', error.message);
   });
-  startReminderJob();
 
-app.use(['/api/cf', '/api/lc'], apiLimiter);
+  app.use(['/api/cf', '/api/lc'], apiLimiter);
 app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/cf', cfRoutes);

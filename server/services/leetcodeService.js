@@ -28,6 +28,9 @@ const safeGet = async (path, { optional = false, fallback = null } = {}) => {
   }
 };
 
+
+
+
 // --- Individual endpoint fetchers -----------------------------------------
 
 export const fetchLCProfile = (handle) => safeGet(`/user/${encodeURIComponent(handle)}`);
