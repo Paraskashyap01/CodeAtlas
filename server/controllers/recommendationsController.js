@@ -13,9 +13,8 @@ export const getRecommendations = async (req, res) => {
 
     const cacheDate = todayKey();
     const existing = await RecommendationCache.findOne({ userId: req.userId, cacheDate });
-    const hasAiProvider = Boolean(
-      process.env.GOOGLE_GEMINI_API_KEY || process.env.OPENAI_API_KEY || process.env.ANTHROPIC_API_KEY
-    );
+    // Only OpenAI is implemented; Gemini and Anthropic support not yet added
+    const hasAiProvider = Boolean(process.env.OPENAI_API_KEY);
 
     if (existing && (!hasAiProvider || existing.generatedBy !== 'fallback')) {
       return res.json(existing);

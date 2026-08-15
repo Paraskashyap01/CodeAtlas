@@ -1,6 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { getPublicProfile } from '../api/profile.js';
 
 const colors = { easy: '#10b981', medium: '#f59e0b', hard: '#f43f5e' };
@@ -21,15 +20,6 @@ const PublicProfilePage = () => {
         setStatus(error.response?.data?.message || 'Profile unavailable');
       });
   }, [username]);
-
-  const chartData = useMemo(() => {
-    const dist = data?.codeforces?.solvedBreakdown || {};
-    return [
-      { name: 'Easy', key: 'easy', value: dist.easy || 0, color: colors.easy },
-      { name: 'Medium', key: 'medium', value: dist.medium || 0, color: colors.medium },
-      { name: 'Hard', key: 'hard', value: dist.hard || 0, color: colors.hard },
-    ];
-  }, [data]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50/30 px-4 py-8 text-slate-900">
