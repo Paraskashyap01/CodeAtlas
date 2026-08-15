@@ -23,7 +23,7 @@ const PublicProfilePage = () => {
   }, [username]);
 
   const chartData = useMemo(() => {
-    const dist = data?.codeforces?.difficultyDistribution || {};
+    const dist = data?.codeforces?.solvedBreakdown || {};
     return [
       { name: 'Easy', key: 'easy', value: dist.easy || 0, color: colors.easy },
       { name: 'Medium', key: 'medium', value: dist.medium || 0, color: colors.medium },
@@ -91,67 +91,60 @@ const PublicProfilePage = () => {
             </header>
 
             {/* Stats Grid */}
-            <section className="mt-8 grid gap-4 md:grid-cols-3">
-              <div className="stat-card-emerald p-6 hover:shadow-md transition-all duration-300 group">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-widest text-emerald-700 group-hover:text-emerald-800 transition-colors">
-                      Problems Solved
-                    </p>
-                    <p className="mt-3 text-3xl font-bold text-emerald-900">{data.codeforces?.solvedCount ?? 0}</p>
+            <section className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              {data.codeforces && (
+                <>
+                  <div className="stat-card-emerald p-6 hover:shadow-md transition-all duration-300 group">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-widest text-emerald-700 group-hover:text-emerald-800 transition-colors">
+                          CF Solved
+                        </p>
+                        <p className="mt-3 text-3xl font-bold text-emerald-900">{data.codeforces.solvedCount}</p>
+                      </div>
+                      <span className="text-3xl opacity-40 group-hover:opacity-60 transition-opacity">🎯</span>
+                    </div>
                   </div>
-                  <span className="text-3xl opacity-40 group-hover:opacity-60 transition-opacity">🎯</span>
-                </div>
-              </div>
-              <div className="stat-card-blue p-6 hover:shadow-md transition-all duration-300 group">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-widest text-blue-700 group-hover:text-blue-800 transition-colors">
-                      Rating Updates
-                    </p>
-                    <p className="mt-3 text-3xl font-bold text-blue-900">{data.codeforces?.ratingHistory?.length ?? 0}</p>
+                  <div className="stat-card-blue p-6 hover:shadow-md transition-all duration-300 group">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-widest text-blue-700 group-hover:text-blue-800 transition-colors">
+                          CF Rating
+                        </p>
+                        <p className="mt-3 text-3xl font-bold text-blue-900">{data.codeforces.currentRating || 'N/A'}</p>
+                      </div>
+                      <span className="text-3xl opacity-40 group-hover:opacity-60 transition-opacity">⭐</span>
+                    </div>
                   </div>
-                  <span className="text-3xl opacity-40 group-hover:opacity-60 transition-opacity">📈</span>
-                </div>
-              </div>
-              <div className="stat-card-rose p-6 hover:shadow-md transition-all duration-300 group">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-widest text-rose-700 group-hover:text-rose-800 transition-colors">
-                      Active Days
-                    </p>
-                    <p className="mt-3 text-3xl font-bold text-rose-900">{data.codeforces?.calendar?.length ?? 0}</p>
+                </>
+              )}
+              {data.leetcode && (
+                <>
+                  <div className="stat-card-amber p-6 hover:shadow-md transition-all duration-300 group">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-widest text-amber-700 group-hover:text-amber-800 transition-colors">
+                          LC Solved
+                        </p>
+                        <p className="mt-3 text-3xl font-bold text-amber-900">{data.leetcode.solvedBreakdown?.all || 0}</p>
+                      </div>
+                      <span className="text-3xl opacity-40 group-hover:opacity-60 transition-opacity">✅</span>
+                    </div>
                   </div>
-                  <span className="text-3xl opacity-40 group-hover:opacity-60 transition-opacity">🔥</span>
-                </div>
-              </div>
+                  <div className="stat-card-rose p-6 hover:shadow-md transition-all duration-300 group">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-widest text-rose-700 group-hover:text-rose-800 transition-colors">
+                          LC Streak
+                        </p>
+                        <p className="mt-3 text-3xl font-bold text-rose-900">🔥 {data.leetcode.streak}</p>
+                      </div>
+                      <span className="text-3xl opacity-40 group-hover:opacity-60 transition-opacity"></span>
+                    </div>
+                  </div>
+                </>
+              )}
             </section>
-            {/* Chart */}
-            <section className="mt-8 panel border-slate-200">
-              <h2 className="section-title mb-6">📊 Difficulty Distribution</h2>
-              <div className="h-72">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={chartData}>
-                    <XAxis dataKey="name" tick={{ fill: '#6b7280' }} />
-                    <YAxis tick={{ fill: '#6b7280' }} />
-                    <Tooltip
-                      contentStyle={{
-                        background: '#ffffff',
-                        border: '1px solid #e5e7eb',
-                        borderRadius: '8px',
-                        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
-                      }}
-                    />
-                    <Bar dataKey="value" radius={[8, 8, 0, 0]} isAnimationActive={false}>
-                      {chartData.map((entry) => (
-                        <Cell key={entry.key} fill={entry.color} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </section>
-
             {/* CTA */}
             <section className="mt-12 text-center pb-8">
               <p className="text-slate-600 mb-4">Want to track your own growth like this?</p>

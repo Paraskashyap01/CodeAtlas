@@ -1,6 +1,6 @@
-import CachedLCData from '../models/CachedLCData.js';
 import User from '../models/user.js';
 import { getCFDataForUser } from '../services/codeforcesService.js';
+import { getLCDataForUser } from '../services/leetcodeService.js';
 import { apiError } from '../utils/validation.js';
 
 export const getPublicProfile = async (req, res) => {
@@ -8,28 +8,46 @@ export const getPublicProfile = async (req, res) => {
     const username = req.params.username;
     const user = await User.findOne({
       $or: [{ cfHandle: username }, { lcHandle: username }, { email: username }],
-    }).select('email cfHandle lcHandle createdAt');
+    }).select('cfHandle lcHandle createdAt');
 
     if (!user) return apiError(res, 404, 'Profile not found');
 
-    const [cfData, lcCache] = await Promise.all([
+    const [cfData, lcData] = await Promise.all([
       user.cfHandle ? getCFDataForUser(user._id, user.cfHandle) : null,
-      CachedLCData.findOne({ userId: user._id }),
+      user.lcHandle ? getLCDataForUser(user._id, user.lcHandle) : null,
     ]);
 
     res.json({
       success: true,
       profile: {
         id: user._id,
-        displayName: user.cfHandle || user.lcHandle || user.email,
-        cfHandle: user.cfHandle,
-        lcHandle: user.lcHandle,
+        displayName: user.cfHandle || user.lcHandle || username,
+        cfHandle: user.cfHandle || null,
+        lcHandle: user.lcHandle || null,
         joinedAt: user.createdAt,
       },
       codeforces: cfData
-        ? { handle: cfData.handle, fetchedAt: cfData.fetchedAt, ratingHistory: cfData.ratingHistory, currentRating: cfData.currentRating, solvedCount: cfData.solvedCount, difficultyDistribution: cfData.difficultyDistribution, topicStats: cfData.topicStats, weakTopics: cfData.weakTopics, calendar: cfData.calendar, recentSubmissions: cfData.recentSubmissions }
+        ? {
+            handle: cfData.handle,
+            currentRating: cfData.currentRating,
+            solvedCount: cfData.solvedCount,
+            ratingHistory: cfData.ratingHistory,
+            calendar: cfData.calendar,
+            fetchedAt: cfData.fetchedAt,
+          }
         : null,
-      leetcode: lcCache ? { handle: lcCache.handle, stats: lcCache.stats, fetchedAt: lcCache.fetchedAt } : null,
+      leetcode: lcData
+        ? {
+            handle: lcData.handle,
+            solvedBreakdown: lcData.solvedBreakdown,
+            totalBreakdown: lcData.totalBreakdown,
+            contestRanking: lcData.contestRanking,
+            calendar: lcData.calendar,
+            streak: lcData.streak,
+            totalActiveDays: lcData.totalActiveDays,
+            fetchedAt: lcData.fetchedAt,
+          }
+        : null,
     });
   } catch (error) {
     console.error(error);

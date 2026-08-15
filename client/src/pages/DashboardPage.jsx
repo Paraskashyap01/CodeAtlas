@@ -31,21 +31,13 @@ const DashboardPage = () => {
   }, [profile]);
 
   const lcCounts = useMemo(() => {
-    const ac = lcData?.stats?.submitStats?.acSubmissionNum;
-    if (!ac) return null;
-
-  
-    // Handle both array and string cases
-    if (Array.isArray(ac)) {
-      return {
-        easy: ac.find((x) => x.difficulty === 'Easy')?.count ?? 0,
-        medium: ac.find((x) => x.difficulty === 'Medium')?.count ?? 0,
-        hard: ac.find((x) => x.difficulty === 'Hard')?.count ?? 0,
-      };
-    }
-
-    // If ac is a string, it might be empty or malformed
-    return null;
+    const solved = lcData?.solvedBreakdown;
+    if (!solved) return null;
+    return {
+      easy: solved.easy ?? 0,
+      medium: solved.medium ?? 0,
+      hard: solved.hard ?? 0,
+    };
   }, [lcData]);
 
   const cfCurrentRating = useMemo(() => {
@@ -162,11 +154,11 @@ const DashboardPage = () => {
 
         <Link to="/leetcode" className="block">
           <StatCard
-            label="LC Global Rank"
-            value={lcData?.stats?.ranking?.globalRanking ?? 'N/A'}
-            icon="🏆"
-            accentColor="text-rose-900"
-            colorClass="stat-card-rose"
+            label="LC Problems Solved"
+            value={lcData?.solvedBreakdown?.all ?? 0}
+            icon="✅"
+            accentColor="text-amber-900"
+            colorClass="stat-card-amber"
           />
         </Link>
       </section>

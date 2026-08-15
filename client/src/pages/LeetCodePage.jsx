@@ -15,16 +15,9 @@ import {
 } from 'recharts';
 
 import AppShell from '../components/AppShell.jsx';
-import { getLCProfile } from '../api/lc.js';
+import { getLCStats } from '../api/lc.js';
 
 const difficultyColors = { Easy: '#10b981', Medium: '#f59e0b', Hard: '#f43f5e' };
-
-const TABS = [
-  { id: 'overview', label: 'Overview', icon: '📊' },
-  { id: 'submissions', label: 'Submissions', icon: '📝' },
-  { id: 'contests', label: 'Contests', icon: '🏆' },
-  { id: 'problems', label: 'Topics', icon: '🏷️' },
-];
 
 const LeetCodePage = () => {
   const [data, setData] = useState(null);
@@ -32,12 +25,13 @@ const LeetCodePage = () => {
   const [activeTab, setActiveTab] = useState('overview');
 
   useEffect(() => {
-    getLCProfile()
+    getLCStats()
       .then((response) => {
         setData(response.data);
         setStatus('ready');
       })
       .catch((error) => {
+        console.error(error);
         setStatus(error.response?.data?.message || 'Unable to load LeetCode profile');
       });
   }, []);
@@ -48,13 +42,11 @@ const LeetCodePage = () => {
 
   const difficultyChartData = useMemo(() => {
     const solved = data?.solvedBreakdown || {};
-    const total = data?.totalBreakdown || {};
     return ['Easy', 'Medium', 'Hard'].map((label) => {
       const key = label.toLowerCase();
       return {
         name: label,
-        solved: solved[key] || 0,
-        total: total[key] || 0,
+        value: solved[key] || 0,
         color: difficultyColors[label],
       };
     });
@@ -65,20 +57,15 @@ const LeetCodePage = () => {
       (data?.contestHistory || [])
         .filter((c) => c.attended)
         .map((c) => ({
-          x: c.contest?.startTime
-            ? new Date(c.contest.startTime * 1000).toLocaleDateString()
-            : '',
-          rating: Math.round(c.rating),
+          x: c.contest?.startTime ? new Date(c.contest.startTime * 1000).toLocaleDateString() : '',
+          rating: Math.round(c.rating || 0),
           title: c.contest?.title,
         })),
     [data]
   );
 
   return (
-    <AppShell
-      title="LeetCode"
-      subtitle="Deep dive into your LeetCode profile: solved breakdown, submissions, contest history, and topic mastery."
-    >
+    <AppShell title="LeetCode" subtitle="Track your LeetCode progress: solved problems, difficulty breakdown, and contest history.">
       {status === 'loading' && (
         <div className="flex items-center justify-center py-12">
           <div className="text-center">
@@ -89,68 +76,34 @@ const LeetCodePage = () => {
       )}
 
       {status !== 'loading' && status !== 'ready' && (
-        <div className="rounded-lg border border-rose-200 bg-rose-50 p-4 text-rose-800 text-sm animate-fade-in-up">
-          ✗ {status}
-        </div>
+        <div className="rounded-lg border border-rose-200 bg-rose-50 p-4 text-rose-800 text-sm animate-fade-in-up">✗ {status}</div>
       )}
 
       {data && (
         <div className="space-y-6 animate-fade-in-up">
-          {/* Profile header */}
-          <div className="panel-violet border-0 flex flex-wrap items-center gap-5">
-            {data.profile?.avatar && (
-              <img
-                src={data.profile.avatar}
-                alt={data.handle}
-                className="h-16 w-16 rounded-full border-2 border-white shadow-md"
-              />
-            )}
-            <div className="flex-1 min-w-[200px]">
-              <h2 className="text-xl font-bold text-slate-900">
-                {data.profile?.realName || data.handle}
-              </h2>
-              <p className="text-sm text-slate-600">@{data.handle}</p>
-            </div>
-            <div className="flex flex-wrap gap-3">
-              {data.profile?.contestBadge?.name && (
-                <span className="badge-primary">🏅 {data.profile.contestBadge.name}</span>
-              )}
-              {data.profile?.ranking != null && (
-                <span className="badge-success">Rank #{data.profile.ranking.toLocaleString()}</span>
-              )}
-              <span className="badge-warning">🔥 {data.streak || 0} day streak</span>
+          <div className="panel-violet border-0">
+            <div className="flex flex-wrap items-center gap-5">
+              <div className="flex-1 min-w-[200px]">
+                <h2 className="text-xl font-bold text-slate-900">{data.profile?.realName || data.handle}</h2>
+                <p className="text-sm text-slate-600">@{data.handle}</p>
+              </div>
+              <div className="flex flex-wrap gap-3">
+                {data.profile?.ranking != null && <span className="badge-success">Rank #{data.profile.ranking.toLocaleString()}</span>}
+                <span className="badge-warning">🔥 {data.streak || 0} day streak</span>
+              </div>
             </div>
           </div>
 
-          {/* Tabs */}
           <nav className="flex flex-wrap gap-0.5 rounded-xl border border-slate-200/60 bg-slate-100/40 p-1.5 backdrop-blur-sm w-fit">
-            {TABS.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`rounded-lg px-4 py-2 text-sm font-medium transition-all duration-200 ${
-                  activeTab === tab.id
-                    ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
-                    : 'text-slate-700 hover:text-slate-900 hover:bg-white'
-                }`}
-              >
-                {tab.icon} {tab.label}
-              </button>
-            ))}
+            <TabButton active={activeTab === 'overview'} onClick={() => setActiveTab('overview')} icon="📊" label="Overview" />
+            <TabButton active={activeTab === 'submissions'} onClick={() => setActiveTab('submissions')} icon="📝" label="Submissions" />
+            <TabButton active={activeTab === 'contests'} onClick={() => setActiveTab('contests')} icon="🏆" label="Contests" />
+            <TabButton active={activeTab === 'problems'} onClick={() => setActiveTab('problems')} icon="🏷️" label="Topics" />
           </nav>
 
-          {activeTab === 'overview' && (
-            <OverviewTab
-              data={data}
-              difficultyChartData={difficultyChartData}
-              yearAgo={yearAgo}
-              today={today}
-            />
-          )}
+          {activeTab === 'overview' && <OverviewTab data={data} difficultyChartData={difficultyChartData} yearAgo={yearAgo} today={today} />}
           {activeTab === 'submissions' && <SubmissionsTab submissions={data.submissions} />}
-          {activeTab === 'contests' && (
-            <ContestsTab data={data} contestRatingSeries={contestRatingSeries} />
-          )}
+          {activeTab === 'contests' && <ContestsTab data={data} contestRatingSeries={contestRatingSeries} />}
           {activeTab === 'problems' && <ProblemsTab skills={data.skills} submissions={data.submissions} />}
         </div>
       )}
@@ -158,23 +111,23 @@ const LeetCodePage = () => {
   );
 };
 
-// --- Overview Tab ---
+const TabButton = ({ active, onClick, icon, label }) => (
+  <button
+    onClick={onClick}
+    className={`rounded-lg px-4 py-2 text-sm font-medium transition-all duration-200 ${
+      active ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20' : 'text-slate-700 hover:text-slate-900 hover:bg-white'
+    }`}
+  >
+    {icon} {label}
+  </button>
+);
+
 const OverviewTab = ({ data, difficultyChartData, yearAgo, today }) => (
   <div className="space-y-6">
     <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
       <StatCard label="Total Solved" value={data.solvedBreakdown?.all ?? 0} icon="✅" colorClass="stat-card-emerald" />
-      <StatCard
-        label="Contest Rating"
-        value={data.contestRanking?.rating ? Math.round(data.contestRanking.rating) : 'N/A'}
-        icon="⭐"
-        colorClass="stat-card-blue"
-      />
-      <StatCard
-        label="Global Rank"
-        value={data.contestRanking?.globalRanking ? `#${data.contestRanking.globalRanking.toLocaleString()}` : 'N/A'}
-        icon="🏆"
-        colorClass="stat-card-amber"
-      />
+      <StatCard label="Contest Rating" value={data.contestRanking?.rating ? Math.round(data.contestRanking.rating) : 'N/A'} icon="⭐" colorClass="stat-card-blue" />
+      <StatCard label="Global Rank" value={data.contestRanking?.globalRanking ? `#${data.contestRanking.globalRanking.toLocaleString()}` : 'N/A'} icon="🏆" colorClass="stat-card-amber" />
       <StatCard label="Active Days" value={data.totalActiveDays ?? 0} icon="📅" colorClass="stat-card-rose" />
     </section>
 
@@ -183,12 +136,7 @@ const OverviewTab = ({ data, difficultyChartData, yearAgo, today }) => (
         <h2 className="section-title mb-5 flex items-center gap-2">📊 Difficulty Breakdown</h2>
         <div className="h-72">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={data.solvedBreakdown
-                ? Object.entries({ Easy: data.solvedBreakdown.easy, Medium: data.solvedBreakdown.medium, Hard: data.solvedBreakdown.hard })
-                    .map(([name, value]) => ({ name, value, color: difficultyColors[name] }))
-                : []}
-            >
+            <BarChart data={difficultyChartData}>
               <CartesianGrid stroke="#e5e7eb" />
               <XAxis dataKey="name" tick={{ fill: '#6b7280' }} />
               <YAxis tick={{ fill: '#6b7280' }} />
@@ -203,84 +151,31 @@ const OverviewTab = ({ data, difficultyChartData, yearAgo, today }) => (
         </div>
       </div>
 
-      <div className="panel-cyan border-0">
-        <h2 className="section-title mb-5 flex items-center gap-2">🎯 Today's Daily Challenge</h2>
-        {data.daily ? (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between gap-3">
-              <h3 className="font-semibold text-slate-900">
-                {data.daily.question?.problemUrl ? (
-                  <a href={data.daily.question.problemUrl} target="_blank" rel="noopener noreferrer" className="text-blue-700 hover:text-blue-900 hover:underline">
-                    #{data.daily.question?.questionFrontendId} {data.daily.question?.title}
-                  </a>
-                ) : (
-                  <>#{data.daily.question?.questionFrontendId} {data.daily.question?.title}</>
-                )}
-              </h3>
-              <span className={`badge text-xs ${
-                data.daily.question?.difficulty === 'Easy' ? 'bg-emerald-100 text-emerald-800' :
-                data.daily.question?.difficulty === 'Medium' ? 'bg-amber-100 text-amber-800' :
-                'bg-rose-100 text-rose-800'
-              }`}>
-                {data.daily.question?.difficulty}
-              </span>
-            </div>
-            <p className="text-xs text-slate-500">Acceptance rate: {data.daily.question?.acRate?.toFixed(1)}%</p>
-            <div className="flex flex-wrap gap-2">
-              {(data.daily.question?.topicTags || []).map((tag) => (
-                <span key={tag.slug} className="badge-primary text-xs">{tag.name}</span>
-              ))}
-            </div>
+      <div className="panel-blue border-0">
+        <h2 className="section-title mb-5 flex items-center gap-2">📅 Submission Calendar</h2>
+        {data.calendar?.length ? (
+          <div className="overflow-x-auto pb-4">
+            <CalendarHeatmap
+              startDate={yearAgo}
+              endDate={today}
+              values={data.calendar}
+              classForValue={(value) => {
+                if (!value) return 'color-empty';
+                if (value.count >= 5) return 'color-scale-4';
+                if (value.count >= 3) return 'color-scale-3';
+                if (value.count >= 2) return 'color-scale-2';
+                return 'color-scale-1';
+              }}
+            />
           </div>
         ) : (
-          <Empty text="Daily challenge unavailable." />
+          <Empty text="No submission activity yet." />
         )}
       </div>
     </section>
-
-    <div className="panel-blue border-0">
-      <h2 className="section-title mb-5 flex items-center gap-2">📅 Submission Calendar</h2>
-      {data.calendar?.length ? (
-        <div className="overflow-x-auto pb-4">
-          <CalendarHeatmap
-            startDate={yearAgo}
-            endDate={today}
-            values={data.calendar}
-            classForValue={(value) => {
-              if (!value) return 'color-empty';
-              if (value.count >= 5) return 'color-scale-4';
-              if (value.count >= 3) return 'color-scale-3';
-              if (value.count >= 2) return 'color-scale-2';
-              return 'color-scale-1';
-            }}
-          />
-        </div>
-      ) : (
-        <Empty text="No submission activity yet." />
-      )}
-    </div>
-
-    {data.badges?.length > 0 && (
-      <div className="panel-violet border-0">
-        <h2 className="section-title mb-5 flex items-center gap-2">🏅 Badges</h2>
-        <div className="flex flex-wrap gap-4">
-          {data.badges.map((badge) => (
-            <div key={badge.id} className="flex flex-col items-center gap-2 rounded-lg border border-slate-200 bg-white p-3 w-28 text-center">
-              <img
-                src={badge.icon?.startsWith('http') ? badge.icon : `https://leetcode.com${badge.icon}`}
-                alt={badge.displayName}
-                className="h-10 w-10 object-contain"
-              />
-              <span className="text-xs font-medium text-slate-700">{badge.displayName}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-    )}
   </div>
 );
 
-// --- Submissions Tab ---
 const statusColor = (statusDisplay) => {
   if (statusDisplay === 'Accepted') return 'bg-emerald-100 text-emerald-800';
   if (statusDisplay?.includes('Error')) return 'bg-slate-200 text-slate-700';
@@ -298,34 +193,20 @@ const SubmissionsTab = ({ submissions }) => (
               <th className="px-4 py-3 font-semibold">Problem</th>
               <th className="px-4 py-3 font-semibold">Language</th>
               <th className="px-4 py-3 font-semibold">Status</th>
-              <th className="px-4 py-3 font-semibold">Runtime</th>
-              <th className="px-4 py-3 font-semibold">Memory</th>
               <th className="px-4 py-3 font-semibold">When</th>
             </tr>
           </thead>
           <tbody>
             {submissions.map((s) => (
               <tr key={s.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors duration-150">
-                <td className="px-4 py-3 text-slate-900 font-medium">
-                  {s.problemUrl ? (
-                    <a href={s.problemUrl} target="_blank" rel="noopener noreferrer" className="text-blue-700 hover:underline">
-                      {s.frontendId ? `#${s.frontendId} ` : ''}{s.title}
-                    </a>
-                  ) : (
-                    <>{s.frontendId ? `#${s.frontendId} ` : ''}{s.title}</>
-                  )}
-                </td>
-                <td className="px-4 py-3 text-slate-600">{s.langName || s.lang || '-'}</td>
+                <td className="px-4 py-3 text-slate-900 font-medium">{s.title || 'Unknown'}</td>
+                <td className="px-4 py-3 text-slate-600">{s.langName || '-'}</td>
                 <td className="px-4 py-3">
                   <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${statusColor(s.statusDisplay)}`}>
                     {s.statusDisplay ?? '-'}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-slate-600">{s.runtime || '-'}</td>
-                <td className="px-4 py-3 text-slate-600">{s.memory || '-'}</td>
-                <td className="px-4 py-3 text-slate-600 text-xs">
-                  {s.timestamp ? new Date(parseInt(s.timestamp, 10) * 1000).toLocaleString() : '-'}
-                </td>
+                <td className="px-4 py-3 text-slate-600 text-xs">{s.timestamp ? new Date(parseInt(s.timestamp, 10) * 1000).toLocaleString() : '-'}</td>
               </tr>
             ))}
           </tbody>
@@ -337,7 +218,6 @@ const SubmissionsTab = ({ submissions }) => (
   </div>
 );
 
-// --- Contests Tab ---
 const ContestsTab = ({ data, contestRatingSeries }) => (
   <div className="space-y-6">
     <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -391,13 +271,7 @@ const ContestsTab = ({ data, contestRatingSeries }) => (
                     <td className="px-4 py-3 text-slate-600">#{c.ranking?.toLocaleString()}</td>
                     <td className="px-4 py-3 text-slate-600">{c.problemsSolved}/{c.totalProblems}</td>
                     <td className="px-4 py-3 text-slate-600">{Math.round(c.rating)}</td>
-                    <td className="px-4 py-3">
-                      {c.trendDirection === 'UP' ? (
-                        <span className="text-emerald-600">▲</span>
-                      ) : (
-                        <span className="text-rose-500">▼</span>
-                      )}
-                    </td>
+                    <td className="px-4 py-3">{c.trendDirection === 'UP' ? <span className="text-emerald-600">▲</span> : <span className="text-rose-500">▼</span>}</td>
                   </tr>
                 ))}
             </tbody>
@@ -410,29 +284,11 @@ const ContestsTab = ({ data, contestRatingSeries }) => (
   </div>
 );
 
-// --- Problems / Topics Tab with clickable sections ---
+// --- Problems / Topics Tab ---
 const skillTierMeta = {
   fundamental: { label: 'Fundamental', panel: 'panel-emerald', badge: 'badge-success', color: 'emerald' },
   intermediate: { label: 'Intermediate', panel: 'panel-amber', badge: 'badge-warning', color: 'amber' },
   advanced: { label: 'Advanced', panel: 'panel-rose', badge: 'badge-danger', color: 'rose' },
-};
-
-// Build a map of tagName -> accepted problems from submissions
-const buildTagProblemsMap = (submissions = []) => {
-  const map = new Map();
-  const seen = new Set();
-  for (const s of submissions) {
-    if (s.statusDisplay !== 'Accepted') continue;
-    const key = s.frontendId || s.title;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    // LeetCode submissions don't have tags in the raw list, so we'll link by title
-    // We store all accepted problems so we can at least show a count-matched list
-    const entry = { title: s.title, frontendId: s.frontendId, url: s.problemUrl, lang: s.langName || s.lang };
-    if (!map.has('__all')) map.set('__all', []);
-    map.get('__all').push(entry);
-  }
-  return map;
 };
 
 const ProblemsTab = ({ skills, submissions = [] }) => {
@@ -440,8 +296,6 @@ const ProblemsTab = ({ skills, submissions = [] }) => {
   const tiers = ['fundamental', 'intermediate', 'advanced'];
   const hasAny = tiers.some((tier) => skills?.[tier]?.length);
 
-  // We use the skills data which has tagName + problemsSolved count
-  // For actual problem list, we approximate from accepted submissions
   const acceptedProblems = useMemo(() => {
     const seen = new Set();
     const list = [];
@@ -455,17 +309,11 @@ const ProblemsTab = ({ skills, submissions = [] }) => {
     return list;
   }, [submissions]);
 
-  if (!hasAny) {
-    return (
-      <div className="panel border-0">
-        <Empty text="No topic/skill data available yet." />
-      </div>
-    );
-  }
+  if (!hasAny) return <div className="panel border-0"><Empty text="No topic/skill data available yet." /></div>;
 
   return (
     <div className="space-y-6">
-      <p className="text-sm text-slate-500">Click any topic to see problems in that skill area. Problem count shown is from your LeetCode profile.</p>
+      <p className="text-sm text-slate-500">Click any topic to see representative accepted problems from your submissions.</p>
       {tiers.map((tier) => {
         const meta = skillTierMeta[tier];
         const items = (skills?.[tier] || []).slice().sort((a, b) => b.problemsSolved - a.problemsSolved);
@@ -473,58 +321,37 @@ const ProblemsTab = ({ skills, submissions = [] }) => {
         return (
           <div key={tier}>
             <h2 className="text-base font-bold text-slate-700 mb-3 flex items-center gap-2">
-              <span className={`w-3 h-3 rounded-full ${
-                tier === 'fundamental' ? 'bg-emerald-500' :
-                tier === 'intermediate' ? 'bg-amber-500' : 'bg-rose-500'
-              }`} />
+              <span className={`w-3 h-3 rounded-full ${tier === 'fundamental' ? 'bg-emerald-500' : tier === 'intermediate' ? 'bg-amber-500' : 'bg-rose-500'}`} />
               {meta.label}
             </h2>
             <div className="space-y-2">
-              {items.map((skill, idx) => {
+              {items.map((skill) => {
                 const key = `${tier}-${skill.tagSlug}`;
                 const isOpen = expandedSkill === key;
-                // Show a slice of accepted problems as representative (since LeetCode API doesn't return per-tag problem lists in the cached data)
-                const slicedProblems = acceptedProblems.slice(0, skill.problemsSolved);
-
+                const slicedProblems = acceptedProblems.slice(0, skill.problemsSolved || 0);
                 return (
                   <div key={skill.tagSlug} className="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm">
-                    <button
-                      onClick={() => setExpandedSkill(isOpen ? null : key)}
-                      className="w-full flex items-center justify-between gap-3 px-5 py-4 hover:bg-slate-50 transition-colors text-left"
-                    >
+                    <button onClick={() => setExpandedSkill(isOpen ? null : key)} className="w-full flex items-center justify-between gap-3 px-5 py-4 hover:bg-slate-50 transition-colors text-left">
                       <div className="flex items-center gap-3">
                         <span className="text-sm font-semibold text-slate-900">{skill.tagName}</span>
                         <span className={`${meta.badge} text-xs`}>{skill.problemsSolved} solved</span>
                       </div>
                       <div className="flex items-center gap-3">
                         <div className="w-24 bg-slate-100 rounded-full h-2 hidden sm:block">
-                          <div
-                            className={`h-2 rounded-full transition-all duration-300 ${
-                              tier === 'fundamental' ? 'bg-emerald-500' :
-                              tier === 'intermediate' ? 'bg-amber-500' : 'bg-rose-500'
-                            }`}
-                            style={{ width: `${Math.min(100, (skill.problemsSolved / 50) * 100)}%` }}
-                          />
+                          <div className={`h-2 rounded-full transition-all duration-300 ${tier === 'fundamental' ? 'bg-emerald-500' : tier === 'intermediate' ? 'bg-amber-500' : 'bg-rose-500'}`} style={{ width: `${Math.min(100, ((skill.problemsSolved || 0) / 50) * 100)}%` }} />
                         </div>
                         <span className="text-slate-400 text-sm">{isOpen ? '▲' : '▼'}</span>
                       </div>
                     </button>
                     {isOpen && (
                       <div className="border-t border-slate-100 px-5 py-4 bg-slate-50">
-                        <p className="text-xs text-slate-400 mb-3">
-                          Showing your {skill.problemsSolved} most recent accepted submissions as a representative list.
-                          LeetCode's API doesn't provide per-topic problem lists directly.
-                        </p>
+                        <p className="text-xs text-slate-400 mb-3">Showing representative accepted submissions for this topic.</p>
                         {slicedProblems.length ? (
                           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                             {slicedProblems.map((p, i) => (
                               <div key={i} className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2.5 hover:border-blue-300 hover:bg-blue-50 transition-all">
                                 <span className="text-xs text-slate-400 w-8 shrink-0">#{p.frontendId || i + 1}</span>
-                                <span className="text-sm font-medium text-slate-800 truncate flex-1">
-                                  {p.url ? (
-                                    <a href={p.url} target="_blank" rel="noopener noreferrer" className="text-blue-700 hover:underline">{p.title}</a>
-                                  ) : p.title}
-                                </span>
+                                <span className="text-sm font-medium text-slate-800 truncate flex-1">{p.url ? <a href={p.url} target="_blank" rel="noopener noreferrer" className="text-blue-700 hover:underline">{p.title}</a> : p.title}</span>
                               </div>
                             ))}
                           </div>
@@ -550,12 +377,11 @@ const StatCard = ({ label, value, icon, colorClass = 'stat-card' }) => (
     <div className="flex items-start justify-between">
       <div className="flex-1">
         <p className={`text-xs font-semibold uppercase tracking-widest group-hover:opacity-80 transition-colors ${
-          colorClass.includes('emerald') ? 'text-emerald-700' :
-          colorClass.includes('blue') ? 'text-blue-700' :
-          colorClass.includes('amber') ? 'text-amber-700' :
-          colorClass.includes('rose') ? 'text-rose-700' : 'text-slate-600'
+          colorClass.includes('emerald') ? 'text-emerald-700' : colorClass.includes('blue') ? 'text-blue-700' : colorClass.includes('amber') ? 'text-amber-700' : colorClass.includes('rose') ? 'text-rose-700' : 'text-slate-600'
         }`}>{label}</p>
-        <p className="mt-3 text-3xl font-bold text-slate-900">{value}</p>
+        <p className={`mt-3 text-3xl font-bold ${
+          colorClass.includes('emerald') ? 'text-emerald-900' : colorClass.includes('blue') ? 'text-blue-900' : colorClass.includes('amber') ? 'text-amber-900' : colorClass.includes('rose') ? 'text-rose-900' : 'text-slate-900'
+        }`}>{value}</p>
       </div>
       <span className="text-3xl opacity-40 group-hover:opacity-60 transition-opacity">{icon}</span>
     </div>

@@ -1,8 +1,8 @@
 import { validationResult } from 'express-validator';
 import Goal from '../models/Goal.js';
-import CachedLCData from '../models/CachedLCData.js';
 import User from '../models/user.js';
 import { getCFDataForUser } from '../services/codeforcesService.js';
+import { getLCDataForUser } from '../services/leetcodeService.js';
 import { apiError } from '../utils/validation.js';
 
 const getWeekStart = (date = new Date()) => {
@@ -17,11 +17,11 @@ const getWeekStart = (date = new Date()) => {
 const syncGoalProgress = async (userId, goal) => {
   if (!goal) return null;
   const user = await User.findById(userId);
-  if (!user?.cfHandle) {
+  if (!user?.cfHandle && !user?.lcHandle) {
     return goal;
   }
-  const cfData = await getCFDataForUser(userId, user.cfHandle);
-  const lcCache = await CachedLCData.findOne({ userId });
+  const cfData = user.cfHandle ? await getCFDataForUser(userId, user.cfHandle) : null;
+  const lcData = user.lcHandle ? await getLCDataForUser(userId, user.lcHandle) : null;
 
   // NOTE: Week boundaries use UTC. If a user is in UTC+5:30 (IST) and submits on Monday 00:30 IST,
   // it will be counted as Sunday 19:00 UTC (previous day). This is intentional for consistency.
@@ -44,8 +44,8 @@ const syncGoalProgress = async (userId, goal) => {
 
   // Count LeetCode accepted submissions this week using calendar data
   let lcSolvedCount = 0;
-  if (lcCache?.calendar?.length) {
-    lcSolvedCount = (lcCache.calendar || []).reduce((sum, entry) => {
+  if (lcData?.calendar?.length) {
+    lcSolvedCount = (lcData.calendar || []).reduce((sum, entry) => {
       if (!entry.date) return sum;
       const entryDate = new Date(entry.date);
       if (entryDate >= weekStart && entryDate < weekEnd) {
