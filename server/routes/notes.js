@@ -2,10 +2,11 @@ import express from 'express';
 import { body } from 'express-validator';
 import { createNote, getNotes } from '../controllers/notesController.js';
 import authMiddleware from '../middleware/auth.js';
+import asyncHandler from '../utils/asyncHandler.js';
 
 const router = express.Router();
 
-router.get('/', authMiddleware, getNotes);
+router.get('/', authMiddleware, asyncHandler(getNotes));
 router.post(
   '/',
   authMiddleware,
@@ -15,7 +16,7 @@ router.post(
     body('platform').optional().isIn(['codeforces', 'leetcode', 'other']),
     body('revisit').optional().isBoolean(),
   ],
-  createNote
+  asyncHandler(createNote)
 );
 
 export default router;

@@ -16,18 +16,11 @@ const userSchema = new mongoose.Schema({
     type: String,
     trim: true,
     default: null,
-    // sparse so multiple users with no handle set don't collide on the
-    // unique index - only non-null/non-empty handles must be unique.
-    // default is null (not '') so the index treats "unset" consistently.
-    unique: true,
-    sparse: true,
   },
   lcHandle: {
     type: String,
     trim: true,
     default: null,
-    unique: true,
-    sparse: true,
   },
   friends: {
     type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],

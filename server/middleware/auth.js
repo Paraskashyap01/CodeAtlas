@@ -1,15 +1,16 @@
 import jwt from 'jsonwebtoken';
+import { apiError } from '../utils/validation.js';
 
 const authMiddleware = (req, res, next) => {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ message: 'Authorization token required' });
+    return apiError(res, 401, 'Authorization token required');
   }
 
   const token = authHeader.split(' ')[1];
   const secret = process.env.JWT_SECRET;
   if (!secret) {
-    return res.status(500).json({ message: 'JWT secret not configured' });
+    return apiError(res, 500, 'JWT secret not configured');
   }
 
   try {
@@ -18,7 +19,7 @@ const authMiddleware = (req, res, next) => {
     next();
   } catch (error) {
     console.error(error);
-    res.status(401).json({ message: 'Invalid or expired token' });
+    return apiError(res, 401, 'Invalid or expired token');
   }
 };
 

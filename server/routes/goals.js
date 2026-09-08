@@ -2,10 +2,11 @@ import express from 'express';
 import { body } from 'express-validator';
 import { createGoal, getCurrentGoal, updateGoalProgress } from '../controllers/goalsController.js';
 import authMiddleware from '../middleware/auth.js';
+import asyncHandler from '../utils/asyncHandler.js';
 
 const router = express.Router();
 
-router.get('/', authMiddleware, getCurrentGoal);
+router.get('/', authMiddleware, asyncHandler(getCurrentGoal));
 router.post(
   '/',
   authMiddleware,
@@ -14,8 +15,8 @@ router.post(
     body('targetCount').isInt({ min: 1 }).withMessage('Target count must be at least 1'),
     body('solvedCount').optional().isInt({ min: 0 }),
   ],
-  createGoal
+  asyncHandler(createGoal)
 );
-router.patch('/:id', authMiddleware, updateGoalProgress);
+router.patch('/:id', authMiddleware, asyncHandler(updateGoalProgress));
 
 export default router;

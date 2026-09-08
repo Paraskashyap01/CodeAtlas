@@ -65,7 +65,7 @@ const syncGoalProgress = async (userId, goal) => {
 
 export const createGoal = async (req, res) => {
   const errors = validationResult(req);
-  if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+  if (!errors.isEmpty()) return apiError(res, 400, errors.array().map((error) => error.msg).join(', '));
 
   try {
     const weekStart = getWeekStart();
@@ -89,7 +89,7 @@ export const createGoal = async (req, res) => {
     res.status(201).json({ success: true, goal: syncedGoal || goal });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ success: false, message: 'Unable to save goal' });
+    apiError(res, 500, 'Unable to save goal');
   }
 };
 
@@ -103,7 +103,7 @@ export const getCurrentGoal = async (req, res) => {
     res.json({ success: true, goal, weekStart });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ success: false, message: 'Unable to fetch goal' });
+    apiError(res, 500, 'Unable to fetch goal');
   }
 };
 
@@ -111,7 +111,7 @@ export const getCurrentGoal = async (req, res) => {
 export const updateGoalProgress = async (req, res) => {
   try {
     const goal = await Goal.findOne({ _id: req.params.id, userId: req.userId });
-    if (!goal) return res.status(404).json({ message: 'Goal not found' });
+    if (!goal) return apiError(res, 404, 'Goal not found');
 
     if (typeof req.body.solvedCount === 'number') goal.solvedCount = req.body.solvedCount;
     if (typeof req.body.done === 'boolean') {
@@ -124,7 +124,7 @@ export const updateGoalProgress = async (req, res) => {
     res.json({ goal });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'Unable to update goal' });
+    apiError(res, 500, 'Unable to update goal');
   }
 
 

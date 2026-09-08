@@ -14,6 +14,7 @@ import profileRoutes from './routes/profile.js';
 import friendsRoutes from './routes/friends.js';
 import { apiLimiter } from './middleware/rateLimiter.js';
 import { connectRedis } from './config/redis.js';
+import { apiError } from './utils/validation.js';
 
 dotenv.config();
 
@@ -36,34 +37,29 @@ const startServer = async () => {
   });
 
   app.use(['/api/cf', '/api/lc'], apiLimiter);
-app.use('/api/auth', authRoutes);
-app.use('/api/user', userRoutes);
-app.use('/api/cf', cfRoutes);
-app.use('/api/lc', lcRoutes);
-app.use('/api/notes', notesRoutes);
-app.use('/api/goals', goalsRoutes);
-app.use('/api/recommendations', recommendationsRoutes);
-app.use('/api/profile', profileRoutes);
-app.use('/api/friends', friendsRoutes);
+  app.use('/api/auth', authRoutes);
+  app.use('/api/user', userRoutes);
+  app.use('/api/cf', cfRoutes);
+  app.use('/api/lc', lcRoutes);
+  app.use('/api/notes', notesRoutes);
+  app.use('/api/goals', goalsRoutes);
+  app.use('/api/recommendations', recommendationsRoutes);
+  app.use('/api/profile', profileRoutes);
+  app.use('/api/friends', friendsRoutes);
 
-app.get('/api/ping', (req, res) => {
-  res.json({ message: 'CP Growth Tracker API is alive' });
-});
+  app.get('/api/ping', (req, res) => {
+    res.json({ message: 'CP Growth Tracker API is alive' });
+  });
 
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ message: 'Server error', error: err.message });
-});
+  app.use((err, req, res, next) => {
+    console.error(err.stack);
+    return apiError(res, 500, 'Internal server error');
+  });
 
   const listenOnPort = (port) => {
     app.listen(port, () => {
       console.log(`Server running on http://localhost:${port}`);
     }).on('error', (error) => {
-      if (error.code === 'EADDRINUSE') {
-        console.warn(`Port ${port} is busy, trying ${port + 1}...`);
-        listenOnPort(port + 1);
-        return;
-      }
       console.error('Server startup failed:', error.message);
       process.exit(1);
     });
