@@ -9,6 +9,11 @@ const cfSchema = new mongoose.Schema({
   },
   handle: String,
 
+  userInfo: {
+    type: Object,
+    default: null,
+  },
+
   ratingHistory: {
     type: Array,
     default: [],
@@ -27,6 +32,36 @@ const cfSchema = new mongoose.Schema({
   solvedCount: {
     type: Number,
     default: 0,
+  },
+
+  difficultyDistribution: {
+    type: Object,
+    default: {},
+  },
+
+  topicStats: {
+    type: Object,
+    default: {},
+  },
+
+  weakTopics: {
+    type: Array,
+    default: [],
+  },
+
+  acceptedProblemsByTopic: {
+    type: Object,
+    default: {},
+  },
+
+  calendar: {
+    type: Array,
+    default: [],
+  },
+
+  recentSubmissions: {
+    type: Array,
+    default: [],
   },
 
   fetchedAt: {

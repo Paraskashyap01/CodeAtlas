@@ -48,6 +48,10 @@ const lcSchema = new mongoose.Schema({
     type: Array,
     default: [],
   },
+  acceptedProblems: {
+    type: Array,
+    default: [],
+  },
   badges: {
     type: Array,
     default: [],

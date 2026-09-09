@@ -1,6 +1,7 @@
 import axios from 'axios';
 import redisClient, { connectRedis } from '../config/redis.js';
 import User from '../models/user.js';
+import CachedLCData from '../models/CachedLCData.js';
 
 const LC_API_BASE = process.env.LEETCODE_API_BASE || 'https://leetcode-api-pied.vercel.app';
 const CACHE_TTL_SECONDS = 1800;
@@ -111,6 +112,14 @@ export const fetchLCData = async (handle) => {
 
 const getCacheKey = (userId) => `lc:user:${String(userId)}`;
 
+const persistLCData = async (userId, response) => {
+  await CachedLCData.findOneAndUpdate(
+    { userId },
+    { ...response, userId },
+    { upsert: true, new: true, setDefaultsOnInsert: true }
+  );
+};
+
 export const getLCDataForUser = async (userId, handle) => {
   const cacheKey = getCacheKey(userId);
 
@@ -129,6 +138,19 @@ export const getLCDataForUser = async (userId, handle) => {
     console.error('Redis cache read failed:', error);
   }
 
+  const persistedData = await CachedLCData.findOne({ userId, handle }).lean();
+  if (persistedData) {
+    const { _id, userId: persistedUserId, __v, ...response } = persistedData;
+    response.success = true;
+    try {
+      await connectRedis();
+      await redisClient.setEx(cacheKey, CACHE_TTL_SECONDS, JSON.stringify(response));
+    } catch (error) {
+      console.error('Redis cache write failed:', error);
+    }
+    return response;
+  }
+
   const lcData = await fetchLCData(handle);
   const response = {
     success: true,
@@ -136,12 +158,25 @@ export const getLCDataForUser = async (userId, handle) => {
   };
 
   try {
+    await persistLCData(userId, response);
     await connectRedis();
     await redisClient.setEx(cacheKey, CACHE_TTL_SECONDS, JSON.stringify(response));
   } catch (error) {
     console.error('Redis cache write failed:', error);
   }
 
+  return response;
+};
+
+export const refreshLCDataForUser = async (userId, handle) => {
+  const response = { success: true, ...(await fetchLCData(handle)) };
+  await persistLCData(userId, response);
+  try {
+    await connectRedis();
+    await redisClient.setEx(getCacheKey(userId), CACHE_TTL_SECONDS, JSON.stringify(response));
+  } catch (error) {
+    console.error('Redis cache write failed:', error);
+  }
   return response;
 };
 

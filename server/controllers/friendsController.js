@@ -1,7 +1,8 @@
 import User from '../models/user.js';
-import { getCFDataForUser } from '../services/codeforcesService.js';
-import { getLCDataForUser } from '../services/leetcodeService.js';
+import CachedCFData from '../models/CachedCFData.js';
+import CachedLCData from '../models/CachedLCData.js';
 import { isValidObjectId, apiError } from '../utils/validation.js';
+import { buildLeaderboardData } from '../utils/leaderboard.js';
 
 export const getLeaderboard = async (req, res) => {
   try {
@@ -15,23 +16,12 @@ export const getLeaderboard = async (req, res) => {
       .skip(skip)
       .limit(limit);
     const total = await User.countDocuments();
-
-    const leaderboardData = await Promise.all(
-      users.map(async (user) => {
-        const cfData = user.cfHandle ? await getCFDataForUser(user._id, user.cfHandle) : null;
-        const lcData = user.lcHandle ? await getLCDataForUser(user._id, user.lcHandle) : null;
-        return {
-          id: user._id,
-          displayName: user.cfHandle || user.lcHandle || user.email,
-          cfHandle: user.cfHandle || null,
-          lcHandle: user.lcHandle || null,
-          cfRating: cfData?.currentRating ?? null,
-          cfSolvedCount: cfData?.solvedCount ?? null,
-          lcSolvedCount: lcData?.solvedBreakdown?.all ?? null,
-          friendCount: user.friends?.length || 0,
-        };
-      })
-    );
+    const userIds = users.map((user) => user._id);
+    const [cfStats, lcStats] = await Promise.all([
+      CachedCFData.find({ userId: { $in: userIds } }).select('userId handle currentRating solvedCount').lean(),
+      CachedLCData.find({ userId: { $in: userIds } }).select('userId handle solvedBreakdown').lean(),
+    ]);
+    const leaderboardData = buildLeaderboardData(users, cfStats, lcStats);
 
     res.json({
       success: true,
