@@ -104,7 +104,7 @@ const LeetCodePage = () => {
           {activeTab === 'overview' && <OverviewTab data={data} difficultyChartData={difficultyChartData} yearAgo={yearAgo} today={today} />}
           {activeTab === 'submissions' && <SubmissionsTab submissions={data.submissions} />}
           {activeTab === 'contests' && <ContestsTab data={data} contestRatingSeries={contestRatingSeries} />}
-          {activeTab === 'problems' && <ProblemsTab skills={data.skills} submissions={data.submissions} />}
+          {activeTab === 'problems' && <ProblemsTab skills={data.skills} acceptedProblems={data.acceptedProblems} />}
         </div>
       )}
     </AppShell>
@@ -291,23 +291,10 @@ const skillTierMeta = {
   advanced: { label: 'Advanced', panel: 'panel-rose', badge: 'badge-danger', color: 'rose' },
 };
 
-const ProblemsTab = ({ skills, submissions = [] }) => {
+const ProblemsTab = ({ skills, acceptedProblems = [] }) => {
   const [expandedSkill, setExpandedSkill] = useState(null);
   const tiers = ['fundamental', 'intermediate', 'advanced'];
   const hasAny = tiers.some((tier) => skills?.[tier]?.length);
-
-  const acceptedProblems = useMemo(() => {
-    const seen = new Set();
-    const list = [];
-    for (const s of (submissions || [])) {
-      if (s.statusDisplay !== 'Accepted') continue;
-      const key = s.frontendId || s.title;
-      if (seen.has(key)) continue;
-      seen.add(key);
-      list.push({ title: s.title, frontendId: s.frontendId, url: s.problemUrl, lang: s.langName || s.lang });
-    }
-    return list;
-  }, [submissions]);
 
   if (!hasAny) return <div className="panel border-0"><Empty text="No topic/skill data available yet." /></div>;
 

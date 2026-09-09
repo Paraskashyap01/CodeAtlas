@@ -32,6 +32,7 @@ export const buildCFDerivedStats = (submissions = []) => {
   const solvedProblems = new Set();
   const attemptedByTag = new Map();
   const solvedByTag = new Map();
+  const acceptedProblemsByTopic = new Map();
   const solvedByDifficulty = { easy: 0, medium: 0, hard: 0 };
   const calendarCounts = new Map();
   const recentSubmissions = [];
@@ -57,6 +58,15 @@ export const buildCFDerivedStats = (submissions = []) => {
 
       for (const tag of tags) {
         solvedByTag.set(tag, (solvedByTag.get(tag) || 0) + 1);
+        if (!acceptedProblemsByTopic.has(tag)) acceptedProblemsByTopic.set(tag, []);
+        acceptedProblemsByTopic.get(tag).push({
+          key,
+          name: problem.name,
+          url: buildCFProblemUrl(problem.contestId, problem.index),
+          rating: problem.rating ?? null,
+          contestId: problem.contestId ?? null,
+          index: problem.index ?? null,
+        });
       }
     }
 
@@ -99,6 +109,7 @@ export const buildCFDerivedStats = (submissions = []) => {
     difficultyDistribution: solvedByDifficulty,
     topicStats,
     weakTopics,
+    acceptedProblemsByTopic: Object.fromEntries(acceptedProblemsByTopic),
     calendar: [...calendarCounts.entries()]
       .map(([date, count]) => ({ date, count }))
       .sort((a, b) => a.date.localeCompare(b.date)),

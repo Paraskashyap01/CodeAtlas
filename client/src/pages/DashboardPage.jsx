@@ -1,17 +1,16 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import CalendarHeatmap from 'react-calendar-heatmap';
 import 'react-calendar-heatmap/dist/styles.css';
 
 import AppShell from '../components/AppShell.jsx';
-import { getProfile } from '../api/auth.js';
-import { getCFStats } from '../api/cf.js';
-import { getLCStats } from '../api/lc.js';
+import { getDashboardStats, getProfile } from '../api/auth.js';
 
 const DashboardPage = () => {
   const [profile, setProfile] = useState(null);
   const [cfData, setCfData] = useState(null);
   const [lcData, setLcData] = useState(null);
+  const [dashboardData, setDashboardData] = useState(null);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -24,97 +23,20 @@ const DashboardPage = () => {
   useEffect(() => {
     const fetchStats = async () => {
       if (!profile) return;
-      if (profile.cfHandle) setCfData((await getCFStats()).data);
-      if (profile.lcHandle) setLcData((await getLCStats()).data);
+      const response = await getDashboardStats();
+      setCfData(response.data.cf);
+      setLcData(response.data.lc);
+      setDashboardData(response.data);
     };
     fetchStats().catch(console.error);
   }, [profile]);
-
-  const lcCounts = useMemo(() => {
-    const solved = lcData?.solvedBreakdown;
-    if (!solved) return null;
-    return {
-      easy: solved.easy ?? 0,
-      medium: solved.medium ?? 0,
-      hard: solved.hard ?? 0,
-    };
-  }, [lcData]);
-
-  const cfCurrentRating = useMemo(() => {
-    const ratings = cfData?.ratingHistory || [];
-    if (ratings.length === 0) return 0;
-    return ratings[ratings.length - 1]?.newRating ?? 0;
-  }, [cfData]);
-
-  // Calculate current streak from merged calendar
-  // changed this func !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  const currentStreak = useMemo(() => {
-    const counts = new Map();
-
-    const addEntries = (items = []) => {
-      for (const item of items) {
-        if (!item?.date) continue;
-
-        counts.set(
-          item.date,
-          (counts.get(item.date) || 0) + (item.count || 1)
-        );
-      }
-    };
-
-    addEntries(cfData?.calendar);
-    addEntries(lcData?.calendar);
-
-    // No activity
-    if (counts.size === 0) return 0;
-
-    // Store all active days in a Set for O(1) lookup
-    const activeDays = new Set(
-      [...counts.keys()].map((date) => {
-        const d = new Date(date);
-        d.setHours(0, 0, 0, 0);
-        return d.getTime();
-      })
-    );
-
-    let current = new Date();
-    current.setHours(0, 0, 0, 0);
-
-    // If there is no activity today but there is yesterday,
-    // start counting from yesterday.
-    if (!activeDays.has(current.getTime())) {
-      current.setDate(current.getDate() - 1);
-    }
-
-    let streak = 0;
-
-    while (activeDays.has(current.getTime())) {
-      streak++;
-      current.setDate(current.getDate() - 1);
-    }
-
-    return streak;
-  }, [cfData, lcData]);
 
   const today = new Date();
   const yearAgo = new Date(today);
   yearAgo.setFullYear(today.getFullYear() - 1);
 
-  const mergedCalendar = useMemo(() => {
-    const counts = new Map();
-    const addEntries = (items = []) => {
-      for (const item of items ) {
-        if (!item?.date) continue;
-        counts.set(item.date, (counts.get(item.date) || 0) + (item.count || 1));
-      }
-    };
-
-    addEntries(cfData?.calendar);
-    addEntries(lcData?.calendar);
-
-    return [...counts.entries()].map(([date, count]) => ({ date, count })).sort((a, b) => a.date.localeCompare(b.date));
-  }, [cfData, lcData]);
+  const currentStreak = dashboardData?.currentStreak ?? 0;
+  const mergedCalendar = dashboardData?.mergedCalendar || [];
 
   return (
     <AppShell title="Dashboard" subtitle="Your command centre for competitive programming.">
@@ -145,7 +67,7 @@ const DashboardPage = () => {
         <Link to="/codeforces" className="block">
           <StatCard
             label="CF Current Rating"
-            value={cfCurrentRating}
+            value={cfData?.currentRating ?? 0}
             icon="⭐"
             accentColor="text-blue-900"
             colorClass="stat-card-blue"

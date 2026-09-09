@@ -1,5 +1,27 @@
 import User from '../models/user.js';
 import { validateHandle, apiError } from '../utils/validation.js';
+import { getCFDataForUser } from '../services/codeforcesService.js';
+import { getLCDataForUser } from '../services/leetcodeService.js';
+import { buildDashboardStats } from '../services/dashboardService.js';
+
+export const getDashboardStats = async (req, res) => {
+  const user = await User.findById(req.userId);
+  if (!user) return apiError(res, 404, 'User not found');
+
+  const [cfResult, lcResult] = await Promise.allSettled([
+    user.cfHandle ? getCFDataForUser(user._id, user.cfHandle) : null,
+    user.lcHandle ? getLCDataForUser(user._id, user.lcHandle) : null,
+  ]);
+  const cfData = cfResult.status === 'fulfilled' ? cfResult.value : null;
+  const lcData = lcResult.status === 'fulfilled' ? lcResult.value : null;
+
+  return res.json({
+    success: true,
+    cf: cfData,
+    lc: lcData,
+    ...buildDashboardStats({ cfData, lcData }),
+  });
+};
 
 // Once a user has saved a handle, it is locked: it can never be changed to
 // a different value, and no other account can ever claim it. This keeps

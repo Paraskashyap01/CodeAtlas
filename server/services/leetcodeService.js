@@ -25,6 +25,24 @@ const safeGet = async (path, fallback = null) => {
   }
 };
 
+const buildAcceptedProblems = (submissions = []) => {
+  const acceptedProblems = [];
+  const seenAcceptedProblems = new Set();
+  for (const submission of submissions) {
+    if (submission.statusDisplay !== 'Accepted') continue;
+    const key = submission.frontendId || submission.title;
+    if (!key || seenAcceptedProblems.has(key)) continue;
+    seenAcceptedProblems.add(key);
+    acceptedProblems.push({
+      title: submission.title,
+      frontendId: submission.frontendId ?? null,
+      url: submission.titleSlug ? `https://leetcode.com/problems/${submission.titleSlug}/` : null,
+      lang: submission.langName || submission.lang || null,
+    });
+  }
+  return acceptedProblems;
+};
+
 export const fetchLCData = async (handle) => {
   const [profile, contests, submissions, badges, skills, calendarRaw, daily] = await Promise.all([
     safeGet(`/user/${encodeURIComponent(handle)}`),
@@ -79,6 +97,7 @@ export const fetchLCData = async (handle) => {
       ...s,
       problemUrl: s.titleSlug ? `https://leetcode.com/problems/${s.titleSlug}/` : null,
     })),
+    acceptedProblems: buildAcceptedProblems(submissions),
     badges: badges?.badges ?? [],
     upcomingBadges: badges?.upcomingBadges ?? [],
     skills: skills ?? { fundamental: [], intermediate: [], advanced: [] },
@@ -99,7 +118,12 @@ export const getLCDataForUser = async (userId, handle) => {
     await connectRedis();
     const cachedValue = await redisClient.get(cacheKey);
     if (cachedValue) {
-      return JSON.parse(cachedValue);
+      const cachedResponse = JSON.parse(cachedValue);
+      if (!cachedResponse.acceptedProblems) {
+        cachedResponse.acceptedProblems = buildAcceptedProblems(cachedResponse.submissions);
+        await redisClient.setEx(cacheKey, CACHE_TTL_SECONDS, JSON.stringify(cachedResponse));
+      }
+      return cachedResponse;
     }
   } catch (error) {
     console.error('Redis cache read failed:', error);

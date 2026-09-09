@@ -35,7 +35,12 @@ export const getCachedCFDataForUser = async (userId) => {
     await connectRedis();
     const cachedValue = await redisClient.get(cacheKey);
     if (cachedValue) {
-      return JSON.parse(cachedValue);
+      const cachedResponse = JSON.parse(cachedValue);
+      if (!cachedResponse.acceptedProblemsByTopic) {
+        cachedResponse.acceptedProblemsByTopic = buildCFDerivedStats(cachedResponse.submissions).acceptedProblemsByTopic;
+        await redisClient.setEx(cacheKey, CACHE_TTL_SECONDS, JSON.stringify(cachedResponse));
+      }
+      return cachedResponse;
     }
   } catch (error) {
     console.error('Redis cache read failed:', error);
@@ -51,7 +56,12 @@ export const getCFDataForUser = async (userId, handle) => {
     await connectRedis();
     const cachedValue = await redisClient.get(cacheKey);
     if (cachedValue) {
-      return JSON.parse(cachedValue);
+      const cachedResponse = JSON.parse(cachedValue);
+      if (!cachedResponse.acceptedProblemsByTopic) {
+        cachedResponse.acceptedProblemsByTopic = buildCFDerivedStats(cachedResponse.submissions).acceptedProblemsByTopic;
+        await redisClient.setEx(cacheKey, CACHE_TTL_SECONDS, JSON.stringify(cachedResponse));
+      }
+      return cachedResponse;
     }
   } catch (error) {
     console.error('Redis cache read failed:', error);
@@ -72,6 +82,7 @@ export const getCFDataForUser = async (userId, handle) => {
     difficultyDistribution: derived.difficultyDistribution,
     topicStats: derived.topicStats,
     weakTopics: derived.weakTopics,
+    acceptedProblemsByTopic: derived.acceptedProblemsByTopic,
     calendar: derived.calendar,
     recentSubmissions: derived.recentSubmissions,
   };

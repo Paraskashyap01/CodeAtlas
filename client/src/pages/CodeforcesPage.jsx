@@ -133,7 +133,7 @@ const CodeforcesPage = () => {
               today={today}
             />
           )}
-          {activeTab === 'topics' && <TopicsTab topicStats={data.topicStats} submissions={data.submissions} />}
+          {activeTab === 'topics' && <TopicsTab topicStats={data.topicStats} acceptedProblemsByTopic={data.acceptedProblemsByTopic} />}
           {activeTab === 'contests' && <ContestsTab ratingHistory={data.ratingHistory} cfRatingSeries={cfRatingSeries} />}
           {activeTab === 'submissions' && <SubmissionsTab submissions={data.recentSubmissions} />}
         </div>
@@ -237,32 +237,8 @@ const OverviewTab = ({ data, cfRatingSeries, cfDifficultyData, currentRating, ye
 );
 
 // --- Topics Tab with clickable sections showing problems ---
-const TopicsTab = ({ topicStats = [], submissions = [] }) => {
+const TopicsTab = ({ topicStats = [], acceptedProblemsByTopic = {} }) => {
   const [expandedTopic, setExpandedTopic] = useState(null);
-
-  // Build a map: tag -> list of solved problems (unique)
-  const topicProblems = useMemo(() => {
-    const map = new Map();
-    const seenKeys = new Set();
-    for (const sub of (submissions || [])) {
-      if (sub.verdict !== 'OK') continue;
-      const key = `${sub.contestId}-${sub.problem?.index || sub.problemIndex}`;
-      if (seenKeys.has(key)) continue;
-      seenKeys.add(key);
-      const tags = Array.isArray(sub.problem?.tags) ? sub.problem.tags : (sub.tags || []);
-      const problemName = sub.problem?.name || sub.problemName;
-      const contestId = sub.contestId ?? sub.problem?.contestId;
-      const index = sub.problem?.index || sub.problemIndex;
-      const url = contestId && index ? `https://codeforces.com/problemset/problem/${contestId}/${index}` : null;
-      const rating = sub.problem?.rating || sub.problemRating;
-
-      for (const tag of tags) {
-        if (!map.has(tag)) map.set(tag, []);
-        map.get(tag).push({ key, name: problemName, url, rating, contestId, index });
-      }
-    }
-    return map;
-  }, [submissions]);
 
   if (!topicStats.length) {
     return (
@@ -277,7 +253,7 @@ const TopicsTab = ({ topicStats = [], submissions = [] }) => {
       <p className="text-sm text-slate-500">Click any topic to see the problems you solved.</p>
       {topicStats.map((topic, idx) => {
         const isOpen = expandedTopic === topic.tag;
-        const problems = topicProblems.get(topic.tag) || [];
+        const problems = acceptedProblemsByTopic[topic.tag] || [];
         return (
           <div key={topic.tag} className="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm" style={{ animationDelay: `${0.02 * idx}s` }}>
             <button
@@ -303,7 +279,7 @@ const TopicsTab = ({ topicStats = [], submissions = [] }) => {
               <div className="border-t border-slate-100 px-5 py-4 bg-slate-50">
                 {problems.length ? (
                   <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                    {problems.sort((a, b) => (a.rating || 0) - (b.rating || 0)).map((p) => (
+                    {[...problems].sort((a, b) => (a.rating || 0) - (b.rating || 0)).map((p) => (
                       <div key={p.key} className="flex items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2.5 hover:border-blue-300 hover:bg-blue-50 transition-all duration-150">
                         <span className="text-sm font-medium text-slate-800 truncate flex-1">
                           {p.url ? (
