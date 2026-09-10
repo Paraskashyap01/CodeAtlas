@@ -82,7 +82,7 @@ const SettingsPage = () => {
 
             <div>
               <p className="text-sm text-slate-500">
-                Set or update your handles here so the app can fetch the latest platform stats and recommendations.
+                Set or update your platform handles here to enable stats and recommendations.
               </p>
             </div>
 

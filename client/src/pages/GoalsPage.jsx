@@ -118,7 +118,7 @@ const GoalsPage = () => {
                   <span className="text-slate-900 font-semibold">{goal.targetCount}</span> problems solved
                 </p>
                 <p className="mt-2 text-xs text-slate-600">
-                  Progress syncs from your accepted Codeforces submissions for the current week.
+                  Progress syncs from unique accepted Codeforces and LeetCode problems for the current week.
                 </p>
               </div>
 

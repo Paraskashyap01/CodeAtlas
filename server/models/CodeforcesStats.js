@@ -19,11 +19,6 @@ const cfSchema = new mongoose.Schema({
     default: [],
   },
 
-  submissions: {
-    type: Array,
-    default: [],
-  },
-
   currentRating: {
     type: Number,
     default: null,
@@ -64,12 +59,17 @@ const cfSchema = new mongoose.Schema({
     default: [],
   },
 
+  acceptedByWeek: {
+    type: Object,
+    default: {},
+  },
+
   fetchedAt: {
     type: Date,
     default: Date.now,
   },
-});
+}, { collection: 'cachedcfdatas' });
 
-const CachedCFData = mongoose.model('CachedCFData', cfSchema);
+const CodeforcesStats = mongoose.model('CodeforcesStats', cfSchema);
 
-export default CachedCFData;
+export default CodeforcesStats;

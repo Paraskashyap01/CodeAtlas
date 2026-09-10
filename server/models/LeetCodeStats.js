@@ -48,9 +48,17 @@ const lcSchema = new mongoose.Schema({
     type: Array,
     default: [],
   },
+  recentSubmissions: {
+    type: Array,
+    default: [],
+  },
   acceptedProblems: {
     type: Array,
     default: [],
+  },
+  acceptedByWeek: {
+    type: Object,
+    default: {},
   },
   badges: {
     type: Array,
@@ -81,7 +89,7 @@ const lcSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
-});
+}, { collection: 'cachedlcdatas' });
 
-const CachedLCData = mongoose.model('CachedLCData', lcSchema);
-export default CachedLCData;
+const LeetCodeStats = mongoose.model('LeetCodeStats', lcSchema);
+export default LeetCodeStats;

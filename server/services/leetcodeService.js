@@ -1,7 +1,8 @@
 import axios from 'axios';
 import redisClient, { connectRedis } from '../config/redis.js';
 import User from '../models/user.js';
-import CachedLCData from '../models/CachedLCData.js';
+import LeetCodeStats from '../models/LeetCodeStats.js';
+import { isFresh } from '../utils/cacheFreshness.js';
 
 const LC_API_BASE = process.env.LEETCODE_API_BASE || 'https://leetcode-api-pied.vercel.app';
 const CACHE_TTL_SECONDS = 1800;
@@ -42,6 +43,37 @@ const buildAcceptedProblems = (submissions = []) => {
     });
   }
   return acceptedProblems;
+};
+
+const normalizeRecentSubmission = (submission) => ({
+  id: submission.id ?? null,
+  title: submission.title ?? null,
+  langName: submission.langName ?? submission.lang ?? null,
+  statusDisplay: submission.statusDisplay ?? null,
+  timestamp: submission.timestamp ?? null,
+});
+
+export const buildAcceptedByWeek = (submissions = []) => {
+  const acceptedByWeek = new Map();
+  for (const submission of submissions) {
+    if (submission.statusDisplay !== 'Accepted') continue;
+    const timestamp = Number(submission.timestamp);
+    const problemKey = submission.frontendId || submission.titleSlug || submission.title;
+    if (!Number.isFinite(timestamp) || !problemKey) continue;
+
+    const acceptedDate = new Date(timestamp * 1000);
+    acceptedDate.setUTCHours(0, 0, 0, 0);
+    const day = acceptedDate.getUTCDay();
+    acceptedDate.setUTCDate(acceptedDate.getUTCDate() + (day === 0 ? -6 : 1 - day));
+    const weekKey = acceptedDate.toISOString().slice(0, 10);
+    const weekProblems = acceptedByWeek.get(weekKey) || new Set();
+    weekProblems.add(problemKey);
+    acceptedByWeek.set(weekKey, weekProblems);
+  }
+
+  return Object.fromEntries(
+    [...acceptedByWeek.entries()].map(([week, problems]) => [week, problems.size])
+  );
 };
 
 export const fetchLCData = async (handle) => {
@@ -99,6 +131,7 @@ export const fetchLCData = async (handle) => {
       problemUrl: s.titleSlug ? `https://leetcode.com/problems/${s.titleSlug}/` : null,
     })),
     acceptedProblems: buildAcceptedProblems(submissions),
+    acceptedByWeek: buildAcceptedByWeek(submissions),
     badges: badges?.badges ?? [],
     upcomingBadges: badges?.upcomingBadges ?? [],
     skills: skills ?? { fundamental: [], intermediate: [], advanced: [] },
@@ -113,11 +146,29 @@ export const fetchLCData = async (handle) => {
 const getCacheKey = (userId) => `lc:user:${String(userId)}`;
 
 const persistLCData = async (userId, response) => {
-  await CachedLCData.findOneAndUpdate(
+  const recentSubmissions = response.submissions
+    .slice(0, 50)
+    .map(normalizeRecentSubmission);
+  const persistedResponse = {
+    ...response,
+    submissions: recentSubmissions,
+    recentSubmissions,
+  };
+  await LeetCodeStats.findOneAndUpdate(
     { userId },
-    { ...response, userId },
+    { ...persistedResponse, userId },
     { upsert: true, new: true, setDefaultsOnInsert: true }
   );
+};
+
+export const clearLCDataForUser = async (userId) => {
+  await LeetCodeStats.deleteOne({ userId });
+  try {
+    await connectRedis();
+    await redisClient.del(getCacheKey(userId));
+  } catch (error) {
+    console.error('Redis cache invalidation failed:', error);
+  }
 };
 
 export const getLCDataForUser = async (userId, handle) => {
@@ -128,27 +179,39 @@ export const getLCDataForUser = async (userId, handle) => {
     const cachedValue = await redisClient.get(cacheKey);
     if (cachedValue) {
       const cachedResponse = JSON.parse(cachedValue);
-      if (!cachedResponse.acceptedProblems) {
-        cachedResponse.acceptedProblems = buildAcceptedProblems(cachedResponse.submissions);
-        await redisClient.setEx(cacheKey, CACHE_TTL_SECONDS, JSON.stringify(cachedResponse));
+      if (isFresh(cachedResponse.fetchedAt)) {
+        if (!cachedResponse.acceptedProblems) {
+          cachedResponse.acceptedProblems = buildAcceptedProblems(cachedResponse.submissions);
+          await redisClient.setEx(cacheKey, CACHE_TTL_SECONDS, JSON.stringify(cachedResponse));
+        }
+        return cachedResponse;
       }
-      return cachedResponse;
     }
   } catch (error) {
     console.error('Redis cache read failed:', error);
   }
 
-  const persistedData = await CachedLCData.findOne({ userId, handle }).lean();
+  const persistedData = await LeetCodeStats.findOne({ userId, handle }).lean();
   if (persistedData) {
     const { _id, userId: persistedUserId, __v, ...response } = persistedData;
     response.success = true;
-    try {
-      await connectRedis();
-      await redisClient.setEx(cacheKey, CACHE_TTL_SECONDS, JSON.stringify(response));
-    } catch (error) {
-      console.error('Redis cache write failed:', error);
+    response.submissions = response.recentSubmissions || response.submissions || [];
+    if (isFresh(response.fetchedAt)) {
+      try {
+        await connectRedis();
+        await redisClient.setEx(cacheKey, CACHE_TTL_SECONDS, JSON.stringify(response));
+      } catch (error) {
+        console.error('Redis cache write failed:', error);
+      }
+      return response;
     }
-    return response;
+
+    try {
+      return await refreshLCDataForUser(userId, handle);
+    } catch (error) {
+      console.warn('LeetCode refresh failed; returning stale MongoDB data:', error.message);
+      return response;
+    }
   }
 
   const lcData = await fetchLCData(handle);
@@ -160,7 +223,10 @@ export const getLCDataForUser = async (userId, handle) => {
   try {
     await persistLCData(userId, response);
     await connectRedis();
-    await redisClient.setEx(cacheKey, CACHE_TTL_SECONDS, JSON.stringify(response));
+    await redisClient.setEx(cacheKey, CACHE_TTL_SECONDS, JSON.stringify({
+      ...response,
+      submissions: response.submissions.slice(0, 50),
+    }));
   } catch (error) {
     console.error('Redis cache write failed:', error);
   }
@@ -173,7 +239,10 @@ export const refreshLCDataForUser = async (userId, handle) => {
   await persistLCData(userId, response);
   try {
     await connectRedis();
-    await redisClient.setEx(getCacheKey(userId), CACHE_TTL_SECONDS, JSON.stringify(response));
+    await redisClient.setEx(getCacheKey(userId), CACHE_TTL_SECONDS, JSON.stringify({
+      ...response,
+      submissions: response.submissions.slice(0, 50),
+    }));
   } catch (error) {
     console.error('Redis cache write failed:', error);
   }

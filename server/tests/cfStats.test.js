@@ -17,5 +17,16 @@ test('weak topics use the configured minimum attempt threshold', () => {
   assert.equal(stats.weakTopics[0].tag, 'dp');
 });
 
+test('accepted-by-week counts unique accepted problems without retaining raw history', () => {
+  const monday = Math.floor(Date.parse('2026-09-07T10:00:00.000Z') / 1000);
+  const stats = buildCFDerivedStats([
+    { verdict: 'OK', creationTimeSeconds: monday, problem: { contestId: 1, index: 'A' } },
+    { verdict: 'OK', creationTimeSeconds: monday + 60, problem: { contestId: 1, index: 'A' } },
+    { verdict: 'OK', creationTimeSeconds: monday + 120, problem: { contestId: 2, index: 'B' } },
+  ]);
+
+  assert.equal(stats.acceptedByWeek['2026-09-07'], 2);
+});
+
 
 

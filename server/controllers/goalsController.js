@@ -3,14 +3,14 @@ import Goal from '../models/Goal.js';
 import User from '../models/user.js';
 import { getCFDataForUser } from '../services/codeforcesService.js';
 import { getLCDataForUser } from '../services/leetcodeService.js';
-import { apiError } from '../utils/validation.js';
+import { httpError } from '../utils/errors.js';
 
 const getWeekStart = (date = new Date()) => {
   const d = new Date(date);
-  d.setHours(0, 0, 0, 0);
-  const day = d.getDay();
+  d.setUTCHours(0, 0, 0, 0);
+  const day = d.getUTCDay();
   const diff = day === 0 ? -6 : 1 - day;
-  d.setDate(d.getDate() + diff);
+  d.setUTCDate(d.getUTCDate() + diff);
   return d;
 };
 
@@ -28,11 +28,15 @@ const syncGoalProgress = async (userId, goal) => {
   // For a more user-friendly experience, consider storing user timezone preference.
   const weekStart = goal.weekStart ? new Date(goal.weekStart) : getWeekStart();
   const weekEnd = new Date(weekStart);
-  weekEnd.setDate(weekStart.getDate() + 7);
+  weekEnd.setUTCDate(weekStart.getUTCDate() + 7);
 
-  // Count Codeforces accepted submissions this week
+  // Count Codeforces accepted problems this week from the compact persisted aggregate.
   let cfSolvedCount = 0;
-  if (cfData?.submissions?.length) {
+  const weekKey = weekStart.toISOString().slice(0, 10);
+  if (cfData?.acceptedByWeek && Object.hasOwn(cfData.acceptedByWeek, weekKey)) {
+    cfSolvedCount = cfData.acceptedByWeek[weekKey];
+  } else if (cfData?.submissions?.length) {
+    // Keep compatibility with pre-migration cache entries until they refresh.
     const acceptedThisWeek = (cfData.submissions || []).filter((submission) => {
       if (submission.verdict !== 'OK') return false;
       const createdAt = submission.creationTimeSeconds ? new Date(submission.creationTimeSeconds * 1000) : null;
@@ -42,18 +46,8 @@ const syncGoalProgress = async (userId, goal) => {
     cfSolvedCount = new Set(acceptedThisWeek.map((submission) => `${submission.problem?.contestId ?? ''}-${submission.problem?.index ?? ''}`)).size;
   }
 
-  // Count LeetCode accepted submissions this week using calendar data
-  let lcSolvedCount = 0;
-  if (lcData?.calendar?.length) {
-    lcSolvedCount = (lcData.calendar || []).reduce((sum, entry) => {
-      if (!entry.date) return sum;
-      const entryDate = new Date(entry.date);
-      if (entryDate >= weekStart && entryDate < weekEnd) {
-        return sum + (entry.count || 0);
-      }
-      return sum;
-    }, 0);
-  }
+  // Count unique accepted LeetCode problems using the same metric as Codeforces.
+  const lcSolvedCount = lcData?.acceptedByWeek?.[weekKey] || 0;
 
   // Total solved count from both platforms
   const solvedCount = cfSolvedCount + lcSolvedCount;
@@ -65,10 +59,9 @@ const syncGoalProgress = async (userId, goal) => {
 
 export const createGoal = async (req, res) => {
   const errors = validationResult(req);
-  if (!errors.isEmpty()) return apiError(res, 400, errors.array().map((error) => error.msg).join(', '));
+  if (!errors.isEmpty()) throw httpError(400, errors.array().map((error) => error.msg).join(', '));
 
-  try {
-    const weekStart = getWeekStart();
+  const weekStart = getWeekStart();
     const payload = {
       userId: req.userId,
       weekStart,
@@ -86,32 +79,21 @@ export const createGoal = async (req, res) => {
 
     // Sync on create: if user just set a new goal, reflect current progress from CF submissions
     const syncedGoal = await syncGoalProgress(req.userId, goal);
-    res.status(201).json({ success: true, goal: syncedGoal || goal });
-  } catch (error) {
-    console.error(error);
-    apiError(res, 500, 'Unable to save goal');
-  }
+  res.status(201).json({ success: true, goal: syncedGoal || goal });
 };
 
 
 export const getCurrentGoal = async (req, res) => {
-  try {
-    const weekStart = getWeekStart();
-    const goal = await Goal.findOne({ userId: req.userId, weekStart });
-    // Return goal as-is; only sync on createGoal or explicit updateGoalProgress
-    // This avoids unnecessary re-scans of the submission cache on every dashboard load
-    res.json({ success: true, goal, weekStart });
-  } catch (error) {
-    console.error(error);
-    apiError(res, 500, 'Unable to fetch goal');
-  }
+  const weekStart = getWeekStart();
+  const goal = await Goal.findOne({ userId: req.userId, weekStart });
+  const syncedGoal = await syncGoalProgress(req.userId, goal);
+  res.json({ success: true, goal: syncedGoal, weekStart });
 };
 
 
 export const updateGoalProgress = async (req, res) => {
-  try {
-    const goal = await Goal.findOne({ _id: req.params.id, userId: req.userId });
-    if (!goal) return apiError(res, 404, 'Goal not found');
+  const goal = await Goal.findOne({ _id: req.params.id, userId: req.userId });
+  if (!goal) throw httpError(404, 'Goal not found');
 
     if (typeof req.body.solvedCount === 'number') goal.solvedCount = req.body.solvedCount;
     if (typeof req.body.done === 'boolean') {
@@ -121,11 +103,5 @@ export const updateGoalProgress = async (req, res) => {
     }
 
     await goal.save();
-    res.json({ goal });
-  } catch (error) {
-    console.error(error);
-    apiError(res, 500, 'Unable to update goal');
-  }
-
-
+  res.json({ goal });
 };

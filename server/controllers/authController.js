@@ -2,7 +2,7 @@ import { validationResult } from 'express-validator';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import User from '../models/user.js';
-import { apiError } from '../utils/validation.js';
+import { httpError } from '../utils/errors.js';
 
 export const normalizeEmail = (email) => String(email || '').trim().toLowerCase();
 
@@ -14,72 +14,69 @@ const generateToken = (userId) => {
     return jwt.sign({ userId }, secret, { expiresIn: '7d' });
 };
 
+const AUTH_COOKIE = 'cpgt_auth';
+const cookieOptions = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+    path: '/',
+};
+
+const setAuthCookie = (res, token) => {
+    res.cookie(AUTH_COOKIE, token, cookieOptions);
+};
+
 export const register = async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-        return apiError(res, 400, errors.array().map((error) => error.msg).join(', '));
+        throw httpError(400, errors.array().map((error) => error.msg).join(', '));
     }
 
     const { email, password } = req.body;
     const normalizedEmail = normalizeEmail(email);
 
-    try {
-        const existing = await User.findOne({ email: normalizedEmail });
-        if (existing) {
-            return apiError(res, 400, 'Email already registered');
-        }
+    const existing = await User.findOne({ email: normalizedEmail });
+    if (existing) throw httpError(400, 'Email already registered');
 
-        const passwordHash = await bcrypt.hash(password, 10);
+    const passwordHash = await bcrypt.hash(password, 10);
 
-        const user = new User({ email: normalizedEmail, passwordHash });
-        await user.save();
+    const user = new User({ email: normalizedEmail, passwordHash });
+    await user.save();
 
-        const token = generateToken(user._id);
-        res.status(201).json({ success: true, token, user: { id: user._id, email: user.email, cfHandle: user.cfHandle, lcHandle: user.lcHandle } });
-    } catch (error) {
-        console.error(error);
-        apiError(res, 500, 'Unable to register user');
-    }
+    const token = generateToken(user._id);
+    setAuthCookie(res, token);
+    res.status(201).json({ success: true, user: { id: user._id, email: user.email, cfHandle: user.cfHandle, lcHandle: user.lcHandle } });
 };
 
 export const login = async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-        return apiError(res, 400, errors.array().map((error) => error.msg).join(', '));
+        throw httpError(400, errors.array().map((error) => error.msg).join(', '));
     }
 
     const { email, password } = req.body;
     const normalizedEmail = normalizeEmail(email);
 
-    try {
-        const user = await User.findOne({ email: normalizedEmail });
-        if (!user) {
-            return apiError(res, 401, 'Invalid credentials');
-        }
+    const user = await User.findOne({ email: normalizedEmail });
+    if (!user) throw httpError(401, 'Invalid credentials');
 
-        const validPassword = await bcrypt.compare(password, user.passwordHash);
-        if (!validPassword) {
-            return apiError(res, 401, 'Invalid credentials');
-        }
+    const validPassword = await bcrypt.compare(password, user.passwordHash);
+    if (!validPassword) throw httpError(401, 'Invalid credentials');
 
-        const token = generateToken(user._id);
-        res.json({ success: true, token, user: { id: user._id, email: user.email, cfHandle: user.cfHandle, lcHandle: user.lcHandle } });
-    } catch (error) {
-        console.error(error);
-        apiError(res, 500, 'Unable to log in');
-    }
+    const token = generateToken(user._id);
+    setAuthCookie(res, token);
+    res.json({ success: true, user: { id: user._id, email: user.email, cfHandle: user.cfHandle, lcHandle: user.lcHandle } });
+};
+
+export const logout = async (req, res) => {
+    res.clearCookie(AUTH_COOKIE, { ...cookieOptions, maxAge: undefined });
+    res.json({ success: true });
 };
 
 export const getProfile = async (req, res) => {
-    try {
-        const user = await User.findById(req.userId).select('-passwordHash');
-        if (!user) {
-            return apiError(res, 404, 'User not found');
-        }
-        res.json({ success: true, user });
-    } catch (error) {
-        console.error(error);
-        apiError(res, 500, 'Unable to fetch profile');
-    }
+    const user = await User.findById(req.userId).select('-passwordHash');
+    if (!user) throw httpError(404, 'User not found');
+    res.json({ success: true, user });
 };
 

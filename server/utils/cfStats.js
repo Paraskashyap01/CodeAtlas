@@ -35,6 +35,7 @@ export const buildCFDerivedStats = (submissions = []) => {
   const acceptedProblemsByTopic = new Map();
   const solvedByDifficulty = { easy: 0, medium: 0, hard: 0 };
   const calendarCounts = new Map();
+  const acceptedByWeek = new Map();
   const recentSubmissions = [];
 
   for (const submission of submissions) {
@@ -52,6 +53,17 @@ export const buildCFDerivedStats = (submissions = []) => {
 
     if (accepted && key && !solvedProblems.has(key)) {
       solvedProblems.add(key);
+
+      if (submission.creationTimeSeconds) {
+        const acceptedDate = new Date(submission.creationTimeSeconds * 1000);
+        acceptedDate.setUTCHours(0, 0, 0, 0);
+        const day = acceptedDate.getUTCDay();
+        acceptedDate.setUTCDate(acceptedDate.getUTCDate() + (day === 0 ? -6 : 1 - day));
+        const weekKey = acceptedDate.toISOString().slice(0, 10);
+        const weekProblems = acceptedByWeek.get(weekKey) || new Set();
+        weekProblems.add(key);
+        acceptedByWeek.set(weekKey, weekProblems);
+      }
 
       const bucket = ratingBucket(problem.rating);
       if (bucket) solvedByDifficulty[bucket] += 1;
@@ -110,6 +122,9 @@ export const buildCFDerivedStats = (submissions = []) => {
     topicStats,
     weakTopics,
     acceptedProblemsByTopic: Object.fromEntries(acceptedProblemsByTopic),
+    acceptedByWeek: Object.fromEntries(
+      [...acceptedByWeek.entries()].map(([week, problems]) => [week, problems.size])
+    ),
     calendar: [...calendarCounts.entries()]
       .map(([date, count]) => ({ date, count }))
       .sort((a, b) => a.date.localeCompare(b.date)),

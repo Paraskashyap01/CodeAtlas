@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
 import './config/env.js';
 import connectDB from './utils/db.js';
@@ -30,6 +31,7 @@ app.use(cors({
 }));
 
 app.use(express.json());
+app.use(cookieParser());
 
 const startServer = async () => {
   await connectDB();
@@ -54,8 +56,15 @@ const startServer = async () => {
   });
 
   app.use((err, req, res, next) => {
-    console.error(err.stack);
-    return apiError(res, 500, 'Internal server error');
+    if (res.headersSent) return next(err);
+    if (err?.code === 11000) {
+      const field = Object.keys(err.keyPattern || {})[0];
+      const label = field === 'lcHandle' ? 'LeetCode' : field === 'cfHandle' ? 'Codeforces' : 'Resource';
+      return apiError(res, 409, `That ${label} value is already in use.`);
+    }
+    const statusCode = Number.isInteger(err.statusCode) ? err.statusCode : 500;
+    if (statusCode >= 500) console.error(err.stack || err);
+    return apiError(res, statusCode, statusCode >= 500 ? 'Internal server error' : err.message);
   });
 
   const listenOnPort = (port) => {
