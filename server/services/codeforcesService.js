@@ -1,5 +1,5 @@
 import axios from 'axios';
-import redisClient, { connectRedis } from '../config/redis.js';
+import { deleteRedisValue, getRedisJson, setRedisValue } from '../config/redis.js';
 import User from '../models/user.js';
 import CodeforcesStats from '../models/CodeforcesStats.js';
 import { buildCFDerivedStats } from '../utils/cfStats.js';
@@ -62,36 +62,44 @@ const persistCFData = async (userId, response) => {
 
 export const clearCFDataForUser = async (userId) => {
   await CodeforcesStats.deleteOne({ userId });
-  try {
-    await connectRedis();
-    await redisClient.del(getCacheKey(userId));
-  } catch (error) {
-    console.error('Redis cache invalidation failed:', error);
-  }
+  await deleteRedisValue(getCacheKey(userId));
 };
 
-const buildCFCacheResponse = (response) => {
-  const { submissions, ...cachedResponse } = response;
-  return cachedResponse;
-};
+const buildCFCacheResponse = (response) => ({
+  success: true,
+  handle: response.handle,
+  ratingHistory: response.ratingHistory,
+  fetchedAt: response.fetchedAt,
+  currentRating: response.currentRating,
+  solvedCount: response.solvedCount,
+  difficultyDistribution: response.difficultyDistribution,
+  topicStats: response.topicStats,
+  weakTopics: response.weakTopics,
+  acceptedProblemsByTopic: response.acceptedProblemsByTopic,
+  calendar: response.calendar,
+  recentSubmissions: response.recentSubmissions,
+  acceptedByWeek: response.acceptedByWeek,
+});
+
+const hasCompleteCFCache = (response) => [
+  'handle',
+  'ratingHistory',
+  'fetchedAt',
+  'currentRating',
+  'solvedCount',
+  'difficultyDistribution',
+  'topicStats',
+  'weakTopics',
+  'acceptedProblemsByTopic',
+  'calendar',
+  'recentSubmissions',
+  'acceptedByWeek',
+].every((field) => Object.hasOwn(response, field));
 
 export const getCachedCFDataForUser = async (userId) => {
   const cacheKey = getCacheKey(userId);
-  try {
-    await connectRedis();
-    const cachedValue = await redisClient.get(cacheKey);
-    if (cachedValue) {
-      const cachedResponse = JSON.parse(cachedValue);
-      if (!isFresh(cachedResponse.fetchedAt)) return null;
-      if (!cachedResponse.acceptedProblemsByTopic) {
-        cachedResponse.acceptedProblemsByTopic = buildCFDerivedStats(cachedResponse.submissions).acceptedProblemsByTopic;
-        await redisClient.setEx(cacheKey, CACHE_TTL_SECONDS, JSON.stringify(cachedResponse));
-      }
-      return cachedResponse;
-    }
-  } catch (error) {
-    console.error('Redis cache read failed:', error);
-  }
+  const cachedResponse = await getRedisJson(cacheKey);
+  if (cachedResponse && isFresh(cachedResponse.fetchedAt) && hasCompleteCFCache(cachedResponse)) return cachedResponse;
 
   return null;
 };
@@ -99,21 +107,9 @@ export const getCachedCFDataForUser = async (userId) => {
 export const getCFDataForUser = async (userId, handle) => {
   const cacheKey = getCacheKey(userId);
 
-  try {
-    await connectRedis();
-    const cachedValue = await redisClient.get(cacheKey);
-    if (cachedValue) {
-      const cachedResponse = JSON.parse(cachedValue);
-      if (isFresh(cachedResponse.fetchedAt)) {
-        if (!cachedResponse.acceptedProblemsByTopic) {
-          cachedResponse.acceptedProblemsByTopic = buildCFDerivedStats(cachedResponse.submissions).acceptedProblemsByTopic;
-          await redisClient.setEx(cacheKey, CACHE_TTL_SECONDS, JSON.stringify(cachedResponse));
-        }
-        return cachedResponse;
-      }
-    }
-  } catch (error) {
-    console.error('Redis cache read failed:', error);
+  const cachedResponse = await getRedisJson(cacheKey);
+  if (cachedResponse && isFresh(cachedResponse.fetchedAt) && hasCompleteCFCache(cachedResponse)) {
+    return cachedResponse;
   }
 
   const persistedData = await CodeforcesStats.findOne({ userId, handle }).lean();
@@ -122,12 +118,7 @@ export const getCFDataForUser = async (userId, handle) => {
     response.success = true;
     response.submissions = [];
     if (isFresh(response.fetchedAt)) {
-      try {
-        await connectRedis();
-        await redisClient.setEx(cacheKey, CACHE_TTL_SECONDS, JSON.stringify(response));
-      } catch (error) {
-        console.error('Redis cache write failed:', error);
-      }
+      await setRedisValue(cacheKey, CACHE_TTL_SECONDS, JSON.stringify(buildCFCacheResponse(response)));
       return response;
     }
 
@@ -143,8 +134,7 @@ export const getCFDataForUser = async (userId, handle) => {
 
   try {
     await persistCFData(userId, response);
-    await connectRedis();
-    await redisClient.setEx(cacheKey, CACHE_TTL_SECONDS, JSON.stringify(buildCFCacheResponse(response)));
+    await setRedisValue(cacheKey, CACHE_TTL_SECONDS, JSON.stringify(buildCFCacheResponse(response)));
   } catch (error) {
     console.error('Redis cache write failed:', error);
   }
@@ -155,12 +145,7 @@ export const getCFDataForUser = async (userId, handle) => {
 export const refreshCFDataForUser = async (userId, handle) => {
   const response = buildCFResponse(await fetchCFData(handle));
   await persistCFData(userId, response);
-  try {
-    await connectRedis();
-    await redisClient.setEx(getCacheKey(userId), CACHE_TTL_SECONDS, JSON.stringify(buildCFCacheResponse(response)));
-  } catch (error) {
-    console.error('Redis cache write failed:', error);
-  }
+  await setRedisValue(getCacheKey(userId), CACHE_TTL_SECONDS, JSON.stringify(buildCFCacheResponse(response)));
   return response;
 };
 

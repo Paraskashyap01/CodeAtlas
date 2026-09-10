@@ -37,4 +37,43 @@ export const connectRedis = async () => {
   }
 };
 
+export const getRedisValue = async (key) => {
+  if (!redisClient.isReady) return null;
+  try {
+    return await redisClient.get(key);
+  } catch (error) {
+    console.warn('Redis cache read skipped:', error.message);
+    return null;
+  }
+};
+
+export const getRedisJson = async (key) => {
+  const value = await getRedisValue(key);
+  if (!value) return null;
+  try {
+    return JSON.parse(value);
+  } catch (error) {
+    console.warn('Redis cache entry ignored because it is invalid JSON:', error.message);
+    return null;
+  }
+};
+
+export const setRedisValue = async (key, ttlSeconds, value) => {
+  if (!redisClient.isReady) return;
+  try {
+    await redisClient.setEx(key, ttlSeconds, value);
+  } catch (error) {
+    console.warn('Redis cache write skipped:', error.message);
+  }
+};
+
+export const deleteRedisValue = async (key) => {
+  if (!redisClient.isReady) return;
+  try {
+    await redisClient.del(key);
+  } catch (error) {
+    console.warn('Redis cache invalidation skipped:', error.message);
+  }
+};
+
 export default redisClient;

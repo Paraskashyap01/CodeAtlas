@@ -1,5 +1,5 @@
 import axios from 'axios';
-import redisClient, { connectRedis } from '../config/redis.js';
+import { deleteRedisValue, getRedisJson, setRedisValue } from '../config/redis.js';
 import User from '../models/user.js';
 import LeetCodeStats from '../models/LeetCodeStats.js';
 import { isFresh } from '../utils/cacheFreshness.js';
@@ -163,32 +163,19 @@ const persistLCData = async (userId, response) => {
 
 export const clearLCDataForUser = async (userId) => {
   await LeetCodeStats.deleteOne({ userId });
-  try {
-    await connectRedis();
-    await redisClient.del(getCacheKey(userId));
-  } catch (error) {
-    console.error('Redis cache invalidation failed:', error);
-  }
+  await deleteRedisValue(getCacheKey(userId));
 };
 
 export const getLCDataForUser = async (userId, handle) => {
   const cacheKey = getCacheKey(userId);
 
-  try {
-    await connectRedis();
-    const cachedValue = await redisClient.get(cacheKey);
-    if (cachedValue) {
-      const cachedResponse = JSON.parse(cachedValue);
-      if (isFresh(cachedResponse.fetchedAt)) {
-        if (!cachedResponse.acceptedProblems) {
-          cachedResponse.acceptedProblems = buildAcceptedProblems(cachedResponse.submissions);
-          await redisClient.setEx(cacheKey, CACHE_TTL_SECONDS, JSON.stringify(cachedResponse));
-        }
-        return cachedResponse;
-      }
+  const cachedResponse = await getRedisJson(cacheKey);
+  if (cachedResponse && isFresh(cachedResponse.fetchedAt)) {
+    if (!cachedResponse.acceptedProblems) {
+      cachedResponse.acceptedProblems = buildAcceptedProblems(cachedResponse.submissions);
+      await setRedisValue(cacheKey, CACHE_TTL_SECONDS, JSON.stringify(cachedResponse));
     }
-  } catch (error) {
-    console.error('Redis cache read failed:', error);
+    return cachedResponse;
   }
 
   const persistedData = await LeetCodeStats.findOne({ userId, handle }).lean();
@@ -197,12 +184,7 @@ export const getLCDataForUser = async (userId, handle) => {
     response.success = true;
     response.submissions = response.recentSubmissions || response.submissions || [];
     if (isFresh(response.fetchedAt)) {
-      try {
-        await connectRedis();
-        await redisClient.setEx(cacheKey, CACHE_TTL_SECONDS, JSON.stringify(response));
-      } catch (error) {
-        console.error('Redis cache write failed:', error);
-      }
+      await setRedisValue(cacheKey, CACHE_TTL_SECONDS, JSON.stringify(response));
       return response;
     }
 
@@ -222,8 +204,7 @@ export const getLCDataForUser = async (userId, handle) => {
 
   try {
     await persistLCData(userId, response);
-    await connectRedis();
-    await redisClient.setEx(cacheKey, CACHE_TTL_SECONDS, JSON.stringify({
+    await setRedisValue(cacheKey, CACHE_TTL_SECONDS, JSON.stringify({
       ...response,
       submissions: response.submissions.slice(0, 50),
     }));
@@ -237,15 +218,10 @@ export const getLCDataForUser = async (userId, handle) => {
 export const refreshLCDataForUser = async (userId, handle) => {
   const response = { success: true, ...(await fetchLCData(handle)) };
   await persistLCData(userId, response);
-  try {
-    await connectRedis();
-    await redisClient.setEx(getCacheKey(userId), CACHE_TTL_SECONDS, JSON.stringify({
-      ...response,
-      submissions: response.submissions.slice(0, 50),
-    }));
-  } catch (error) {
-    console.error('Redis cache write failed:', error);
-  }
+  await setRedisValue(getCacheKey(userId), CACHE_TTL_SECONDS, JSON.stringify({
+    ...response,
+    submissions: response.submissions.slice(0, 50),
+  }));
   return response;
 };
 

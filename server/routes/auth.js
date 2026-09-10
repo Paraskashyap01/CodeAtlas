@@ -1,7 +1,6 @@
 import express from 'express';
 import { body } from 'express-validator';
-import { register, login, logout, getProfile } from '../controllers/authController.js';
-import authMiddleware from '../middleware/auth.js';
+import { register, login, logout } from '../controllers/authController.js';
 import asyncHandler from '../utils/asyncHandler.js';
 
 const router = express.Router();
@@ -24,7 +23,6 @@ router.post(
   asyncHandler(login)
 );
 
-router.get('/profile', authMiddleware, asyncHandler(getProfile));
 router.post('/logout', asyncHandler(logout));
 
 export default router;
