@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import AppShell from '../components/AppShell.jsx';
-import { api } from '../api/auth.js';
+import api from '../api/client.js';
 
 const FriendsPage = () => {
   const [leaderboard, setLeaderboard] = useState([]);

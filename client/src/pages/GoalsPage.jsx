@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import AppShell from '../components/AppShell.jsx';
-import { getGoal, saveGoal, updateGoal } from '../api/goals.js';
+import { getGoal, saveGoal } from '../api/goals.js';
 
 const GoalsPage = () => {
   const [goal, setGoal] = useState(null);
@@ -30,13 +30,6 @@ const GoalsPage = () => {
       console.error(error);
       setMessage('Unable to save goal.');
     }
-  };
-
-  const changeProgress = async (delta) => {
-    if (!goal) return;
-    const nextSolved = Math.max(0, goal.solvedCount + delta);
-    const response = await updateGoal(goal._id, { solvedCount: nextSolved });
-    setGoal(response.data.goal);
   };
 
   const pct = goal ? Math.min(100, Math.round((goal.solvedCount / goal.targetCount) * 100)) : 0;
@@ -120,22 +113,6 @@ const GoalsPage = () => {
                 <p className="mt-2 text-xs text-slate-600">
                   Progress syncs from unique accepted Codeforces and LeetCode problems for the current week.
                 </p>
-              </div>
-
-              {/* Control Buttons */}
-              <div className="flex gap-3 pt-2">
-                <button
-                  onClick={() => changeProgress(-1)}
-                  className="btn-secondary flex-1 border-slate-300 text-slate-700 hover:bg-slate-100 hover:border-slate-400"
-                >
-                  −1
-                </button>
-                <button
-                  onClick={() => changeProgress(1)}
-                  className="btn-primary flex-1 bg-emerald-600 text-white hover:bg-emerald-700 shadow-lg shadow-emerald-600/20"
-                >
-                  +1 Solved
-                </button>
               </div>
 
               {/* Completion Badge */}

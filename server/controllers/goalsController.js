@@ -67,7 +67,7 @@ export const createGoal = async (req, res) => {
       weekStart,
       goalDescription: req.body.goalDescription,
       targetCount: req.body.targetCount,
-      solvedCount: req.body.solvedCount || 0,
+      solvedCount: 0,
     };
     payload.done = payload.solvedCount >= payload.targetCount;
 
@@ -91,17 +91,3 @@ export const getCurrentGoal = async (req, res) => {
 };
 
 
-export const updateGoalProgress = async (req, res) => {
-  const goal = await Goal.findOne({ _id: req.params.id, userId: req.userId });
-  if (!goal) throw httpError(404, 'Goal not found');
-
-    if (typeof req.body.solvedCount === 'number') goal.solvedCount = req.body.solvedCount;
-    if (typeof req.body.done === 'boolean') {
-      goal.done = req.body.done;
-    } else {
-      goal.done = goal.solvedCount >= goal.targetCount;
-    }
-
-    await goal.save();
-  res.json({ goal });
-};

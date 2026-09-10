@@ -1,5 +1,3 @@
-import axios from 'axios';
+import api from './client.js';
 
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:5000/api';
-
-export const getPublicProfile = (username) => axios.get(`${API_BASE}/profile/${username}`);
+export const getPublicProfile = (username) => api.get(`/profile/${username}`);
